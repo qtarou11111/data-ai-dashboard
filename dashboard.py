@@ -313,26 +313,66 @@ if st.session_state.selected_apps:
 # --- アプリ検索 ---
 st.sidebar.caption("SEARCH APPS")
 if apps_db:
+    search_market = st.sidebar.radio(
+        "Market", ["All", "iOS", "Android"], horizontal=True, label_visibility="collapsed",
+    )
     search_query = st.sidebar.text_input(
         "検索", placeholder="App name, ID, or publisher...", label_visibility="collapsed"
     )
+
     if search_query and len(search_query) >= 2:
+        from difflib import SequenceMatcher
+
         q = search_query.lower()
-        filtered = [
-            a for a in apps_db
+
+        # マーケットフィルタ
+        market_filter = {"iOS": "ios", "Android": "google-play"}.get(search_market)
+        pool = apps_db if not market_filter else [a for a in apps_db if a.get("market") == market_filter]
+
+        # 完全一致 (部分文字列マッチ)
+        exact = [
+            a for a in pool
             if q in (a.get("name") or "").lower()
             or q in (a.get("app_id") or "").lower()
             or q in (a.get("publisher") or "").lower()
-            or q in (a.get("category") or "").lower()
-        ][:20]
+        ]
+
+        # あいまい検索 (完全一致が少ない場合にフォールバック)
+        if len(exact) < 5:
+            scored = []
+            for a in pool:
+                name = (a.get("name") or "").lower()
+                ratio = SequenceMatcher(None, q, name).ratio()
+                # 単語の先頭一致にボーナス
+                words = name.split()
+                if any(w.startswith(q) for w in words):
+                    ratio += 0.3
+                if ratio >= 0.35:
+                    scored.append((ratio, a))
+            scored.sort(key=lambda x: -x[0])
+            fuzzy = [a for _, a in scored]
+        else:
+            fuzzy = []
+
+        # マージ (完全一致優先、重複除去)
+        seen = set()
+        filtered = []
+        for a in exact + fuzzy:
+            key = (a["app_id"], a.get("market", ""))
+            if key not in seen:
+                seen.add(key)
+                filtered.append(a)
+            if len(filtered) >= 20:
+                break
+
         if filtered:
             for a in filtered:
                 name = a.get("name") or a["app_id"]
                 pub = a.get("publisher") or ""
-                market = a.get("market", "")
-                meta = f"{market}  ·  {pub}" if pub else market
+                market_icon = "🍎" if a.get("market") == "ios" else "🤖"
+                display = f"{market_icon} {name}"
                 btn_key = f"add_{a['app_id']}_{a['market']}"
-                if st.sidebar.button(f"＋  {name}", key=btn_key, use_container_width=True):
+                if st.sidebar.button(f"＋  {display}", key=btn_key, use_container_width=True):
                     entry = {"app_id": a["app_id"], "market": a["market"], "label": name}
                     if entry not in st.session_state.selected_apps:
                         st.session_state.selected_apps.append(entry)
@@ -357,6 +397,36 @@ if show_manual:
             if entry not in st.session_state.selected_apps:
                 st.session_state.selected_apps.append(entry)
             st.rerun()
+
+# --- 同カテゴリ レコメンド ---
+if st.session_state.selected_apps and apps_db:
+    selected_ids = {a["app_id"] for a in st.session_state.selected_apps}
+    # 選択中アプリのカテゴリを収集
+    selected_categories = set()
+    for sel in st.session_state.selected_apps:
+        for a in apps_db:
+            if a["app_id"] == sel["app_id"] and a.get("category"):
+                selected_categories.add(a["category"])
+    if selected_categories:
+        # 同カテゴリで未選択のアプリを抽出
+        recs = [
+            a for a in apps_db
+            if a.get("category") in selected_categories
+            and a["app_id"] not in selected_ids
+            and a.get("name")
+        ][:10]
+        if recs:
+            st.sidebar.markdown("---")
+            cats_label = ", ".join(sorted(selected_categories))
+            st.sidebar.caption(f"RECOMMENDED ({cats_label})")
+            for a in recs:
+                name = a.get("name") or a["app_id"]
+                btn_key = f"rec_{a['app_id']}_{a['market']}"
+                if st.sidebar.button(f"＋  {name}", key=btn_key, use_container_width=True):
+                    entry = {"app_id": a["app_id"], "market": a["market"], "label": name}
+                    if entry not in st.session_state.selected_apps:
+                        st.session_state.selected_apps.append(entry)
+                    st.rerun()
 
 st.sidebar.markdown("---")
 
