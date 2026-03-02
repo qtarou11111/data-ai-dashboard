@@ -32,14 +32,15 @@ def get_headers():
 def fetch_ranking(market, device, feed):
     """ランキング API からアプリ一覧を取得する。"""
     url = f"{BASE_URL}/intelligence/apps/{market}/ranking"
+    # Google Play は categories=OVERALL / device=android が必須
+    category = "OVERALL" if market == "google-play" else "Overall"
     params = {
         "countries": "JP",
-        "categories": "Overall",
+        "categories": category,
         "feeds": feed,
         "granularity": "daily",
+        "device": device,
     }
-    if device:
-        params["device"] = device
     resp = requests.get(url, headers=get_headers(), params=params)
     if resp.status_code != 200:
         print(f"  SKIP {market}/{feed}/{device}: HTTP {resp.status_code}")
@@ -61,8 +62,8 @@ def sync():
         ("ios", "iphone", "paid"),
         ("ios", "iphone", "grossing"),
         ("ios", "ipad", "free"),
-        ("google-play", None, "free"),
-        ("google-play", None, "grossing"),
+        ("google-play", "android", "free"),
+        ("google-play", "android", "grossing"),
     ]
 
     new_count = 0
