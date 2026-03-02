@@ -164,22 +164,24 @@ st.markdown("""
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
   /* ── Global ── */
-  .block-container { padding-top: 1.5rem; max-width: 1280px; }
+  .block-container { padding-top: 2.5rem; max-width: 1280px; }
   html, body, [class*="st-"] { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-  [data-testid="stSidebar"] { background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%); border-right: 1px solid #E2E8F0; }
-  [data-testid="stSidebar"] .block-container { padding-top: 1rem; }
+  [data-testid="stSidebar"] { background: #F8FAFC; border-right: 1px solid #E2E8F0; }
+  [data-testid="stSidebar"] > div:first-child { padding-top: 1rem; }
+  [data-testid="stAppViewContainer"] { background: #FFFFFF; }
+  header[data-testid="stHeader"] { background: transparent; }
 
   /* ── Header ── */
   .dash-header {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 0.25rem; flex-wrap: wrap; gap: 0.5rem;
+    margin: 0 0 0.5rem 0; flex-wrap: wrap; gap: 0.5rem;
   }
   .dash-title {
     font-size: 1.5rem; font-weight: 700; color: #0F172A;
-    letter-spacing: -0.02em; margin: 0;
+    letter-spacing: -0.02em; margin: 0; line-height: 1.3;
   }
   .dash-subtitle {
-    font-size: 0.8rem; color: #94A3B8; font-weight: 400; margin: 0;
+    font-size: 0.8rem; color: #94A3B8; font-weight: 400; margin: 0.15rem 0 0 0;
   }
 
   /* ── Status Badges ── */
@@ -233,6 +235,30 @@ st.markdown("""
   /* ── Divider ── */
   .section-divider { border: none; border-top: 1px solid #F1F5F9; margin: 1.5rem 0 1rem 0; }
 
+  /* ── Sidebar ── */
+  [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { margin-bottom: 0; }
+  [data-testid="stSidebar"] .sidebar-logo {
+    font-size: 1.1rem; font-weight: 700; color: #0F172A;
+    padding: 0.5rem 0 0.75rem; border-bottom: 1px solid #E2E8F0; margin-bottom: 0.75rem;
+  }
+  .search-result {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.45rem 0.6rem; margin: 0.2rem 0; border-radius: 8px;
+    border: 1px solid #E2E8F0; background: white; transition: background 0.1s;
+  }
+  .search-result:hover { background: #F8FAFC; }
+  .search-result-info { flex: 1; min-width: 0; }
+  .search-result-name { font-size: 0.8rem; font-weight: 600; color: #1E293B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
+  .search-result-meta { font-size: 0.65rem; color: #94A3B8; margin: 0; }
+  .selected-app {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.4rem 0.6rem; margin: 0.2rem 0; border-radius: 8px;
+    border: 1px solid #E2E8F0; background: white;
+  }
+  .selected-app-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .selected-app-name { font-size: 0.8rem; font-weight: 500; color: #1E293B; flex: 1; margin: 0; }
+  .selected-app-market { font-size: 0.65rem; color: #94A3B8; margin: 0; }
+
   /* ── Misc ── */
   [data-testid="stTabs"] [data-baseweb="tab-list"] { gap: 0; }
   [data-testid="stTabs"] [data-baseweb="tab"] {
@@ -258,19 +284,37 @@ st.markdown("""
 
 
 # ─── サイドバー ───
-st.sidebar.markdown("### Settings")
+st.sidebar.markdown('<p class="sidebar-logo">App Intelligence</p>', unsafe_allow_html=True)
 
 apps_db = load_apps_db()
 
 if "selected_apps" not in st.session_state:
     st.session_state.selected_apps = []
 
-st.sidebar.markdown("#### App Search")
+# --- 選択済みアプリ ---
+if st.session_state.selected_apps:
+    st.sidebar.caption("SELECTED APPS")
+    for i, app in enumerate(st.session_state.selected_apps):
+        color = COLORS[i % len(COLORS)]
+        st.sidebar.markdown(
+            f'<div class="selected-app">'
+            f'<span class="selected-app-dot" style="background:{color}"></span>'
+            f'<span class="selected-app-name">{app["label"]}</span>'
+            f'<span class="selected-app-market">{app["market"]}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    # 一括クリアボタン
+    if st.sidebar.button("Clear all", key="clear_all"):
+        st.session_state.selected_apps = []
+        st.rerun()
+    st.sidebar.markdown("---")
 
+# --- アプリ検索 ---
+st.sidebar.caption("SEARCH APPS")
 if apps_db:
-    st.sidebar.caption(f"{len(apps_db):,} apps in database")
     search_query = st.sidebar.text_input(
-        "検索", placeholder="Search by name, ID, or publisher...", label_visibility="collapsed"
+        "検索", placeholder="App name, ID, or publisher...", label_visibility="collapsed"
     )
     if search_query and len(search_query) >= 2:
         q = search_query.lower()
@@ -280,79 +324,50 @@ if apps_db:
             or q in (a.get("app_id") or "").lower()
             or q in (a.get("publisher") or "").lower()
             or q in (a.get("category") or "").lower()
-        ][:50]
+        ][:20]
         if filtered:
             for a in filtered:
+                name = a.get("name") or a["app_id"]
                 pub = a.get("publisher") or ""
+                market = a.get("market", "")
+                meta = f"{market}  ·  {pub}" if pub else market
                 btn_key = f"add_{a['app_id']}_{a['market']}"
-                col_info, col_btn = st.sidebar.columns([4, 1])
-                col_info.caption(f"**{a.get('name', '')}**  \n`{a['market']}` {pub}")
-                if col_btn.button("+", key=btn_key):
-                    entry = {"app_id": a["app_id"], "market": a["market"], "label": a.get("name") or a["app_id"]}
+                if st.sidebar.button(f"＋  {name}", key=btn_key, use_container_width=True):
+                    entry = {"app_id": a["app_id"], "market": a["market"], "label": name}
                     if entry not in st.session_state.selected_apps:
                         st.session_state.selected_apps.append(entry)
                     st.rerun()
         else:
-            st.sidebar.caption("No matching apps found.")
+            st.sidebar.caption("No results found.")
     elif search_query:
-        st.sidebar.caption("Enter at least 2 characters.")
+        st.sidebar.caption("Type at least 2 characters.")
 else:
     st.sidebar.caption("App DB is empty. Run `python3 sync_apps.py`.")
 
-with st.sidebar.expander("Register new app"):
-    reg_name = st.text_input("App name", placeholder="e.g. MyApp")
-    reg_app_id = st.text_input("App ID", placeholder="e.g. 123456789")
-    reg_market = st.selectbox("Market", ["ios", "google-play"], key="reg_market")
-    reg_publisher = st.text_input("Publisher (optional)", placeholder="e.g. Example Inc.")
-    reg_category = st.text_input("Category (optional)", placeholder="e.g. Games")
-    if st.button("Register"):
-        if reg_app_id and reg_name:
-            new_entry = {
-                "app_id": reg_app_id, "market": reg_market,
-                "name": reg_name, "publisher": reg_publisher, "category": reg_category,
-            }
-            apps_db.append(new_entry)
-            save_apps_db(apps_db)
-            st.success(f"Registered: {reg_name}")
-            st.rerun()
-        else:
-            st.warning("App name and ID are required.")
-
-with st.sidebar.expander("Add by ID"):
-    manual_id = st.text_input("App ID ", placeholder="123456789")
-    manual_market = st.selectbox("Market ", ["ios", "google-play"], key="manual_market")
-    manual_label = st.text_input("Display name", placeholder="e.g. MyApp iOS")
-    if st.button("Add"):
+# --- 手動追加 ---
+show_manual = st.sidebar.checkbox("Add app by ID", value=False)
+if show_manual:
+    manual_id = st.sidebar.text_input("App ID", placeholder="123456789", key="manual_id")
+    manual_market = st.sidebar.selectbox("Market", ["ios", "google-play"], key="manual_market")
+    manual_label = st.sidebar.text_input("Display name", placeholder="e.g. MyApp iOS", key="manual_label")
+    if st.sidebar.button("Add", key="manual_add"):
         if manual_id:
             label = manual_label or f"{manual_id} ({manual_market})"
             entry = {"app_id": manual_id, "market": manual_market, "label": label}
             if entry not in st.session_state.selected_apps:
                 st.session_state.selected_apps.append(entry)
             st.rerun()
-        else:
-            st.warning("App ID is required.")
 
-if st.session_state.selected_apps:
-    st.sidebar.markdown("#### Selected Apps")
-    for i, app in enumerate(st.session_state.selected_apps):
-        col_l, col_d = st.sidebar.columns([4, 1])
-        color = COLORS[i % len(COLORS)]
-        col_l.markdown(
-            f'<span style="color:{color};font-weight:600;font-size:0.85rem">● {app["label"]}</span>'
-            f'<br><span style="color:#94A3B8;font-size:0.7rem">{app["market"]}</span>',
-            unsafe_allow_html=True,
-        )
-        if col_d.button("✕", key=f"rm_{i}"):
-            st.session_state.selected_apps.pop(i)
-            st.rerun()
+st.sidebar.markdown("---")
 
-st.sidebar.divider()
-
+# --- 期間・国 ---
+st.sidebar.caption("FILTERS")
 today = datetime.now().date()
 start_date = st.sidebar.date_input("Start date", value=today - timedelta(days=30))
 end_date = st.sidebar.date_input("End date", value=today - timedelta(days=1))
 country = st.sidebar.text_input("Country code", value="JP")
 
+st.sidebar.markdown("")
 fetch_clicked = st.sidebar.button("Fetch Data", type="primary", use_container_width=True)
 
 
