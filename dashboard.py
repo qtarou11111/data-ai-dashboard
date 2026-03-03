@@ -749,9 +749,10 @@ if dau_df.empty:
 elif device_filter == "All":
     dau_filtered = dau_df.groupby(["date", "app"], as_index=False)["dau"].sum()
 elif device_filter == "iOS":
-    dau_filtered = dau_df[dau_df["device"] == "ios"].copy()
+    dau_filtered = dau_df[dau_df["device"].str.startswith("i", na=False)].copy()
 else:
-    dau_filtered = dau_df[dau_df["device"] == "android"].copy()
+    # iOS 以外をすべて Android として扱う
+    dau_filtered = dau_df[~dau_df["device"].str.startswith("i", na=True)].copy()
 
 # ─── KPI カード ───
 if not dl_df.empty or not dau_df.empty:
@@ -869,9 +870,9 @@ if not dl_df.empty or not dau_df.empty:
             if device_filter == "All":
                 dau_display = dau_df
             elif device_filter == "iOS":
-                dau_display = dau_df[dau_df["device"] == "ios"]
+                dau_display = dau_df[dau_df["device"].str.startswith("i", na=False)]
             else:
-                dau_display = dau_df[dau_df["device"] == "android"]
+                dau_display = dau_df[~dau_df["device"].str.startswith("i", na=True)]
             st.dataframe(dau_display, use_container_width=True, hide_index=True)
             st.download_button("Export CSV", dau_display.to_csv(index=False).encode("utf-8"), "dau.csv", "text/csv")
         else:
