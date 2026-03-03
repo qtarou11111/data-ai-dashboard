@@ -24,7 +24,6 @@ APPS_DB_PATH = Path(__file__).parent / "apps_db.json"
 
 # ─── カラーパレット ───
 COLORS = ["#00d4ff", "#00e676", "#7c3aed", "#f59e42", "#ef4444", "#f472b6"]
-COLORS_LIGHT = ["#0a1a2e", "#0a1e14", "#1a0e2e", "#1e1408", "#1e0a0a", "#1e0a14"]
 
 
 # ─── アプリDB ───
@@ -156,18 +155,18 @@ def resample_df(df, value_col, freq, agg="sum"):
 # ─── グラフ共通スタイル ───
 def apply_chart_style(fig):
     fig.update_layout(
-        plot_bgcolor="#111827",
-        paper_bgcolor="#111827",
-        font=dict(family="'DM Mono', 'Inter', sans-serif", size=12, color="#94a3b8"),
+        plot_bgcolor="#0f1729",
+        paper_bgcolor="#0f1729",
+        font=dict(family="'DM Mono', 'Inter', sans-serif", size=12, color="#cbd5e1"),
         legend=dict(
             orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0,
-            font=dict(size=11, color="#94a3b8"), bgcolor="rgba(0,0,0,0)",
+            font=dict(size=12, color="#e2e8f0"), bgcolor="rgba(0,0,0,0)",
         ),
         margin=dict(l=16, r=16, t=32, b=16),
-        xaxis=dict(showgrid=False, linecolor="#1e293b", tickfont=dict(size=10, color="#64748b")),
-        yaxis=dict(gridcolor="#1e293b", linecolor="#1e293b", tickfont=dict(size=10, color="#64748b"), separatethousands=True),
+        xaxis=dict(showgrid=False, linecolor="#1e293b", tickfont=dict(size=11, color="#94a3b8")),
+        yaxis=dict(gridcolor="#1e293b", linecolor="#1e293b", tickfont=dict(size=11, color="#94a3b8"), separatethousands=True),
         hovermode="x unified",
-        hoverlabel=dict(bgcolor="#111827", bordercolor="#1e293b", font_size=12, font_color="#f1f5f9"),
+        hoverlabel=dict(bgcolor="#1e293b", bordercolor="#334155", font_size=13, font_color="#f1f5f9"),
     )
     return fig
 
@@ -180,131 +179,193 @@ st.markdown("""
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap');
 
   /* ── Global Dark Theme ── */
-  .block-container { padding-top: 2.5rem; max-width: 1280px; }
-  html, body, [class*="st-"] { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-  .stApp, [data-testid="stAppViewContainer"] { background: #0a0e1a !important; color: #f1f5f9; }
-  header[data-testid="stHeader"] { background: #0a0e1a !important; }
+  .block-container { padding-top: 1.5rem; max-width: 1400px; }
+  html, body, [class*="st-"] {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #e2e8f0;
+  }
+  .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
+    background: #080c16 !important; color: #e2e8f0;
+  }
+  header[data-testid="stHeader"] { background: #080c16 !important; }
+  p, span, label, li, td, th, caption, .stMarkdown { color: #e2e8f0 !important; }
 
-  /* Sidebar dark */
-  [data-testid="stSidebar"] { background: #111827 !important; border-right: 1px solid #1e293b; }
+  /* ── Sidebar ── */
+  [data-testid="stSidebar"] { background: #0f1729 !important; border-right: 1px solid #1e293b; }
   [data-testid="stSidebar"] > div:first-child { padding-top: 1rem; }
-  [data-testid="stSidebar"] label, [data-testid="stSidebar"] .stMarkdown p,
-  [data-testid="stSidebar"] span, [data-testid="stSidebar"] .stCaption p { color: #94a3b8 !important; }
-  [data-testid="stSidebar"] input, [data-testid="stSidebar"] select,
-  [data-testid="stSidebar"] [data-baseweb="select"] { background: #0a0e1a !important; color: #f1f5f9 !important; border-color: #1e293b !important; }
-  [data-testid="stSidebar"] button[kind="primary"] { background: #00d4ff !important; color: #0a0e1a !important; border: none !important; }
-  [data-testid="stSidebar"] button:not([kind="primary"]) { background: #1e293b !important; color: #f1f5f9 !important; border: 1px solid #2d3a4d !important; }
+  [data-testid="stSidebar"] p, [data-testid="stSidebar"] span,
+  [data-testid="stSidebar"] label { color: #cbd5e1 !important; }
+  [data-testid="stSidebar"] .stCaption p { color: #64748b !important; font-size: 0.7rem; letter-spacing: 0.08em; }
 
-  /* Streamlit widget overrides */
-  .stTextInput > div > div { background: #111827 !important; border-color: #1e293b !important; color: #f1f5f9 !important; }
-  .stDateInput > div > div { background: #111827 !important; border-color: #1e293b !important; color: #f1f5f9 !important; }
-  .stSelectbox > div > div { background: #111827 !important; border-color: #1e293b !important; }
-  .stRadio label span { color: #94a3b8 !important; }
-  .stCheckbox label span { color: #94a3b8 !important; }
+  /* ── All inputs / selects / buttons ── */
+  input, textarea, [data-baseweb="input"] > div,
+  [data-baseweb="select"] > div, [data-baseweb="popover"] > div {
+    background: #131b2e !important; color: #f1f5f9 !important;
+    border-color: #334155 !important; caret-color: #00d4ff;
+  }
+  input::placeholder { color: #64748b !important; }
+  [data-baseweb="select"] span { color: #f1f5f9 !important; }
+  [data-baseweb="menu"] { background: #1e293b !important; }
+  [data-baseweb="menu"] li { color: #e2e8f0 !important; }
+  [data-baseweb="menu"] li:hover { background: #334155 !important; }
+  [data-baseweb="tag"] { background: #1e293b !important; color: #e2e8f0 !important; }
+  [data-baseweb="tag"] span { color: #e2e8f0 !important; }
+
+  /* Date input */
+  .stDateInput > div > div { background: #131b2e !important; border-color: #334155 !important; }
+  .stDateInput input { color: #f1f5f9 !important; }
+
+  /* Radio / Checkbox */
+  .stRadio label span, .stCheckbox label span { color: #cbd5e1 !important; }
+  .stRadio [role="radiogroup"] label[data-checked="true"] span { color: #00d4ff !important; }
+
+  /* Buttons */
+  button[kind="primary"], .stButton button[kind="primary"] {
+    background: #00d4ff !important; color: #080c16 !important;
+    border: none !important; font-weight: 600 !important;
+  }
+  button[kind="primary"]:hover { background: #00bbdf !important; }
+  .stButton button:not([kind="primary"]) {
+    background: #1e293b !important; color: #e2e8f0 !important;
+    border: 1px solid #334155 !important;
+  }
+  .stButton button:not([kind="primary"]):hover { background: #334155 !important; }
+
+  /* Tabs */
+  [data-testid="stTabs"] [data-baseweb="tab-list"] { gap: 0; border-bottom: 1px solid #1e293b; }
+  [data-testid="stTabs"] [data-baseweb="tab"] {
+    font-size: 0.82rem; font-weight: 500; padding: 0.5rem 1.2rem;
+    color: #94a3b8 !important;
+  }
+  [data-testid="stTabs"] [aria-selected="true"] {
+    color: #00d4ff !important; border-bottom-color: #00d4ff !important; font-weight: 600;
+  }
   .stTabs [data-baseweb="tab-panel"] { background: transparent !important; }
+
+  /* DataFrame */
   div[data-testid="stDataFrame"] { border: 1px solid #1e293b; border-radius: 8px; }
+  .stDataFrame td, .stDataFrame th { color: #e2e8f0 !important; }
+
+  /* Download / Export buttons */
+  .stDownloadButton button {
+    background: #1e293b !important; color: #e2e8f0 !important;
+    border: 1px solid #334155 !important;
+  }
+
+  /* Info / Warning / Error boxes */
+  [data-testid="stAlert"] { background: #131b2e !important; border: 1px solid #1e293b !important; color: #e2e8f0 !important; }
+
+  /* Progress bar */
+  .stProgress > div > div { background: #1e293b !important; }
+  .stProgress > div > div > div { background: #00d4ff !important; }
+
+  /* Multiselect */
+  .stMultiSelect > div > div { background: #131b2e !important; border-color: #334155 !important; }
+  .stMultiSelect span { color: #e2e8f0 !important; }
 
   /* ── Header ── */
   .dash-header {
     display: flex; align-items: center; justify-content: space-between;
-    margin: 0 0 0.5rem 0; flex-wrap: wrap; gap: 0.5rem;
+    margin: 0 0 1.2rem 0; flex-wrap: wrap; gap: 0.5rem;
+    padding-bottom: 1rem; border-bottom: 1px solid #1e293b;
   }
   .dash-title {
     font-family: 'Syne', sans-serif;
-    font-size: 1.6rem; font-weight: 800; color: #f1f5f9;
+    font-size: 1.6rem; font-weight: 800; color: #f1f5f9 !important;
     letter-spacing: -0.02em; margin: 0; line-height: 1.3;
   }
   .dash-title span { color: #00d4ff; }
   .dash-subtitle {
-    font-size: 0.8rem; color: #94a3b8; font-weight: 400; margin: 0.15rem 0 0 0;
+    font-size: 0.8rem; color: #94a3b8 !important; font-weight: 400; margin: 0.15rem 0 0 0;
   }
 
   /* ── Status Badges ── */
-  .badge-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; align-items: center; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; align-items: center; }
   .badge {
     display: inline-flex; align-items: center; gap: 0.3rem;
-    padding: 0.2rem 0.65rem; border-radius: 9999px;
+    padding: 0.25rem 0.7rem; border-radius: 9999px;
     font-size: 0.72rem; font-weight: 500; line-height: 1.4;
   }
-  .badge-outline { border: 1px solid #1e293b; color: #94a3b8; background: #111827; }
-  .badge-green  { background: #042f1e; color: #00e676; border: 1px solid #065f3a; }
-  .badge-blue   { background: #041e30; color: #00d4ff; border: 1px solid #0a3d5c; }
-  .badge-amber  { background: #2e1e04; color: #f59e42; border: 1px solid #5c3d0a; }
+  .badge-outline { border: 1px solid #334155; color: #94a3b8 !important; background: #131b2e; }
+  .badge-green  { background: #042f1e; color: #00e676 !important; border: 1px solid #065f3a; }
+  .badge-blue   { background: #041e30; color: #00d4ff !important; border: 1px solid #0a3d5c; }
   .badge-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
   .badge-dot-green { background: #00e676; }
   .badge-dot-amber { background: #f59e42; }
 
   /* ── App Tags ── */
-  .app-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1.25rem; }
+  .app-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
   .app-tag {
     display: inline-flex; align-items: center; gap: 0.35rem;
-    padding: 0.3rem 0.8rem; border-radius: 8px;
-    font-size: 0.78rem; font-weight: 600;
+    padding: 0.35rem 0.85rem; border-radius: 8px;
+    font-size: 0.8rem; font-weight: 600;
     border: 1px solid; transition: all 0.15s;
   }
   .app-tag-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
   /* ── KPI Cards ── */
   .kpi-card {
-    background: #111827; border: 1px solid #1e293b; border-radius: 12px;
+    background: #0f1729; border: 1px solid #1e293b; border-radius: 14px;
     padding: 1.25rem 1.5rem; position: relative; overflow: hidden;
   }
   .kpi-card::before {
     content: ''; position: absolute; top: 0; left: 0; right: 0;
-    height: 3px; border-radius: 12px 12px 0 0;
+    height: 3px; border-radius: 14px 14px 0 0;
   }
-  .kpi-accent-cyan::before   { background: #00d4ff; }
-  .kpi-accent-green::before  { background: #00e676; }
-  .kpi-accent-purple::before { background: #7c3aed; }
-  .kpi-accent-orange::before { background: #f59e42; }
-  .kpi-label { font-size: 0.78rem; color: #94a3b8; font-weight: 500; margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.04em; }
-  .kpi-value { font-family: 'DM Mono', monospace; font-size: 1.75rem; font-weight: 500; color: #f1f5f9; margin: 0; letter-spacing: -0.02em; }
-  .kpi-sub   { font-size: 0.75rem; color: #64748b; margin: 0.25rem 0 0 0; }
+  .kpi-accent-cyan::before   { background: linear-gradient(90deg, #00d4ff, #00d4ff88); }
+  .kpi-accent-green::before  { background: linear-gradient(90deg, #00e676, #00e67688); }
+  .kpi-accent-purple::before { background: linear-gradient(90deg, #7c3aed, #7c3aed88); }
+  .kpi-accent-orange::before { background: linear-gradient(90deg, #f59e42, #f59e4288); }
+  .kpi-label {
+    font-size: 0.78rem; color: #94a3b8 !important; font-weight: 500;
+    margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .kpi-value {
+    font-family: 'DM Mono', monospace; font-size: 1.85rem; font-weight: 500;
+    color: #f8fafc !important; margin: 0; letter-spacing: -0.02em;
+  }
+  .kpi-sub { font-size: 0.75rem; color: #64748b !important; margin: 0.25rem 0 0 0; }
 
   /* ── Section headers ── */
   .section-header {
     font-family: 'Syne', sans-serif;
-    font-size: 0.95rem; font-weight: 600; color: #f1f5f9;
+    font-size: 1rem; font-weight: 700; color: #f1f5f9 !important;
     margin: 0.5rem 0 0.5rem 0; padding: 0;
   }
 
   /* ── Divider ── */
   .section-divider { border: none; border-top: 1px solid #1e293b; margin: 1.5rem 0 1rem 0; }
 
-  /* ── Sidebar ── */
+  /* ── Sidebar details ── */
   [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { margin-bottom: 0; }
   [data-testid="stSidebar"] .sidebar-logo {
     font-family: 'Syne', sans-serif;
-    font-size: 1.1rem; font-weight: 700; color: #00d4ff;
+    font-size: 1.15rem; font-weight: 700; color: #00d4ff !important;
     padding: 0.5rem 0 0.75rem; border-bottom: 1px solid #1e293b; margin-bottom: 0.75rem;
   }
-  .search-result {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0.45rem 0.6rem; margin: 0.2rem 0; border-radius: 8px;
-    border: 1px solid #1e293b; background: #111827; transition: background 0.1s;
-  }
-  .search-result:hover { background: #1e293b; }
-  .search-result-info { flex: 1; min-width: 0; }
-  .search-result-name { font-size: 0.8rem; font-weight: 600; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
-  .search-result-meta { font-size: 0.65rem; color: #64748b; margin: 0; }
   .selected-app {
     display: flex; align-items: center; gap: 0.5rem;
-    padding: 0.4rem 0.6rem; margin: 0.2rem 0; border-radius: 8px;
-    border: 1px solid #1e293b; background: #0a0e1a;
+    padding: 0.45rem 0.65rem; margin: 0.2rem 0; border-radius: 8px;
+    border: 1px solid #1e293b; background: #131b2e;
   }
   .selected-app-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .selected-app-name { font-size: 0.8rem; font-weight: 500; color: #f1f5f9; flex: 1; margin: 0; }
-  .selected-app-market { font-size: 0.65rem; color: #64748b; margin: 0; }
+  .selected-app-name { font-size: 0.82rem; font-weight: 500; color: #f1f5f9 !important; flex: 1; margin: 0; }
+  .selected-app-market { font-size: 0.68rem; color: #64748b !important; margin: 0; }
 
-  /* ── Misc ── */
-  [data-testid="stTabs"] [data-baseweb="tab-list"] { gap: 0; border-bottom: 1px solid #1e293b; }
-  [data-testid="stTabs"] [data-baseweb="tab"] {
-    font-size: 0.8rem; font-weight: 500; padding: 0.5rem 1rem;
-    color: #64748b; border-bottom: 2px solid transparent;
+  /* ── Control bar ── */
+  .control-bar {
+    background: #0f1729; border: 1px solid #1e293b; border-radius: 14px;
+    padding: 1rem 1.5rem; margin-bottom: 1.2rem;
   }
-  [data-testid="stTabs"] [aria-selected="true"] {
-    color: #00d4ff; border-bottom-color: #00d4ff; font-weight: 600;
+  .control-label {
+    font-size: 0.72rem; color: #64748b !important; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 0.4rem 0;
   }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #080c16; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -340,7 +401,6 @@ if groups:
     if selected_group != "-- Select Group --":
         group = next((g for g in groups if g["name"] == selected_group), None)
         if group:
-            # グループ選択でアプリを即座に反映
             if st.session_state.get("_last_group") != selected_group:
                 st.session_state.selected_apps = [dict(a) for a in group["apps"]]
                 st.session_state._last_group = selected_group
@@ -409,7 +469,6 @@ if st.session_state.selected_apps:
             if st.button("✕", key=f"rm_{i}", help="Remove this app"):
                 st.session_state.selected_apps.pop(i)
                 st.rerun()
-    # 一括クリアボタン
     if st.sidebar.button("Clear all", key="clear_all"):
         st.session_state.selected_apps = []
         st.rerun()
@@ -430,11 +489,9 @@ if apps_db:
 
         q = search_query.lower()
 
-        # マーケットフィルタ
         market_filter = {"iOS": "ios", "Android": "google-play"}.get(search_market)
         pool = apps_db if not market_filter else [a for a in apps_db if a.get("market") == market_filter]
 
-        # 完全一致 (部分文字列マッチ)
         exact = [
             a for a in pool
             if q in (a.get("name") or "").lower()
@@ -442,13 +499,11 @@ if apps_db:
             or q in (a.get("publisher") or "").lower()
         ]
 
-        # あいまい検索 (完全一致が少ない場合にフォールバック)
         if len(exact) < 5:
             scored = []
             for a in pool:
                 name = (a.get("name") or "").lower()
                 ratio = SequenceMatcher(None, q, name).ratio()
-                # 単語の先頭一致にボーナス
                 words = name.split()
                 if any(w.startswith(q) for w in words):
                     ratio += 0.3
@@ -459,7 +514,6 @@ if apps_db:
         else:
             fuzzy = []
 
-        # マージ (完全一致優先、重複除去)
         seen = set()
         filtered = []
         for a in exact + fuzzy:
@@ -473,7 +527,6 @@ if apps_db:
         if filtered:
             for a in filtered:
                 name = a.get("name") or a["app_id"]
-                pub = a.get("publisher") or ""
                 market_icon = "🍎" if a.get("market") == "ios" else "🤖"
                 display = f"{market_icon} {name}"
                 btn_key = f"add_{a['app_id']}_{a['market']}"
@@ -506,14 +559,12 @@ if show_manual:
 # --- 同カテゴリ レコメンド ---
 if st.session_state.selected_apps and apps_db:
     selected_ids = {a["app_id"] for a in st.session_state.selected_apps}
-    # 選択中アプリのカテゴリを収集
     selected_categories = set()
     for sel in st.session_state.selected_apps:
         for a in apps_db:
             if a["app_id"] == sel["app_id"] and a.get("category"):
                 selected_categories.add(a["category"])
     if selected_categories:
-        # 同カテゴリで未選択のアプリを抽出
         recs = [
             a for a in apps_db
             if a.get("category") in selected_categories
@@ -533,25 +584,62 @@ if st.session_state.selected_apps and apps_db:
                         st.session_state.selected_apps.append(entry)
                     st.rerun()
 
-st.sidebar.markdown("---")
 
-# --- 期間・国 ---
-st.sidebar.caption("FILTERS")
+# ═══════════════════════════════════════════════════════════════
+# メインエリア — コントロールバー（アプリ選択 + 日付 + フェッチ）
+# ═══════════════════════════════════════════════════════════════
+
+st.markdown('<div class="control-bar">', unsafe_allow_html=True)
+
+ctrl_c1, ctrl_c2, ctrl_c3, ctrl_c4, ctrl_c5 = st.columns([3, 1.5, 1.5, 1, 1])
+
+with ctrl_c1:
+    st.markdown('<p class="control-label">Apps</p>', unsafe_allow_html=True)
+    if apps_db:
+        app_options = {f"{a.get('name', a['app_id'])} ({a['market']})": a for a in apps_db}
+        current_labels = [
+            f"{a['label']} ({a['market']})" for a in st.session_state.selected_apps
+        ]
+        selected_labels = st.multiselect(
+            "Apps", options=list(app_options.keys()),
+            default=[l for l in current_labels if l in app_options],
+            label_visibility="collapsed", key="main_app_select",
+        )
+        # multiselect の変更を selected_apps に反映
+        new_apps = []
+        for label in selected_labels:
+            a = app_options[label]
+            new_apps.append({"app_id": a["app_id"], "market": a["market"], "label": a.get("name", a["app_id"])})
+        if new_apps != st.session_state.selected_apps:
+            st.session_state.selected_apps = new_apps
+            st.rerun()
+    else:
+        st.caption("App DB empty — use sidebar search")
+
 today = datetime.now().date()
-start_date = st.sidebar.date_input("Start date", value=today - timedelta(days=30))
-end_date = st.sidebar.date_input("End date", value=today - timedelta(days=1))
-country = st.sidebar.text_input("Country code", value="JP")
 
-st.sidebar.markdown("")
-fetch_clicked = st.sidebar.button("Fetch Data", type="primary", use_container_width=True)
+with ctrl_c2:
+    st.markdown('<p class="control-label">Start</p>', unsafe_allow_html=True)
+    start_date = st.date_input("Start", value=today - timedelta(days=30), label_visibility="collapsed", key="main_start")
+
+with ctrl_c3:
+    st.markdown('<p class="control-label">End</p>', unsafe_allow_html=True)
+    end_date = st.date_input("End", value=today - timedelta(days=1), label_visibility="collapsed", key="main_end")
+
+with ctrl_c4:
+    st.markdown('<p class="control-label">Country</p>', unsafe_allow_html=True)
+    country = st.text_input("Country", value="JP", label_visibility="collapsed", key="main_country")
+
+with ctrl_c5:
+    st.markdown('<p class="control-label">&nbsp;</p>', unsafe_allow_html=True)
+    fetch_clicked = st.button("Fetch", type="primary", use_container_width=True, key="main_fetch")
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ─── ステータスバッジ ───
 def render_badges():
-    """ヘッダー下にステータスバッジを描画する。"""
     badges = ""
-
-    # 最終更新
     updated_at = st.session_state.get("last_updated")
     if updated_at:
         badges += (
@@ -565,23 +653,14 @@ def render_badges():
             '<span class="badge-dot badge-dot-amber"></span>'
             'Not fetched yet</span>'
         )
-
-    # データソース
     badges += '<span class="badge badge-blue">data.ai API v1.3</span>'
-
-    # 国
     c = st.session_state.get("last_country", country)
     badges += f'<span class="badge badge-outline">{c}</span>'
-
-    # 期間
     s = st.session_state.get("last_start", "")
     e = st.session_state.get("last_end", "")
     if s and e:
         badges += f'<span class="badge badge-outline">{s} → {e}</span>'
-
-    # DB件数
     badges += f'<span class="badge badge-outline">DB: {len(apps_db):,} apps</span>'
-
     st.markdown(f'<div class="badge-row">{badges}</div>', unsafe_allow_html=True)
 
 
@@ -592,9 +671,8 @@ if st.session_state.selected_apps:
     tags_html = ""
     for i, app in enumerate(st.session_state.selected_apps):
         c = COLORS[i % len(COLORS)]
-        bg = COLORS_LIGHT[i % len(COLORS_LIGHT)]
         tags_html += (
-            f'<span class="app-tag" style="background:{bg};color:{c};border-color:{c}22">'
+            f'<span class="app-tag" style="background:{c}18;color:{c};border-color:{c}44">'
             f'<span class="app-tag-dot" style="background:{c}"></span>'
             f'{app["label"]}</span>'
         )
@@ -603,11 +681,11 @@ if st.session_state.selected_apps:
 
 # ─── メインエリア ───
 if not st.session_state.selected_apps:
-    st.info("Search and select apps from the sidebar to get started.")
+    st.info("サイドバーまたは上部のコントロールバーからアプリを選択してください。")
     st.stop()
 
 if not fetch_clicked and "dl_df" not in st.session_state:
-    st.info("Press **Fetch Data** in the sidebar to load metrics.")
+    st.info("上部の **Fetch** ボタンを押してデータを取得してください。")
     st.stop()
 
 if fetch_clicked:
@@ -716,7 +794,7 @@ with chart_col1:
                         name=app_name, mode="lines",
                         line=dict(color=COLORS[i % len(COLORS)], width=2.5),
                         fill="tozeroy",
-                        fillcolor=f"rgba({int(COLORS[i % len(COLORS)][1:3],16)},{int(COLORS[i % len(COLORS)][3:5],16)},{int(COLORS[i % len(COLORS)][5:7],16)},0.15)",
+                        fillcolor=f"rgba({int(COLORS[i % len(COLORS)][1:3],16)},{int(COLORS[i % len(COLORS)][3:5],16)},{int(COLORS[i % len(COLORS)][5:7],16)},0.12)",
                     ))
                 apply_chart_style(fig)
                 st.plotly_chart(fig, use_container_width=True)
@@ -739,7 +817,7 @@ with chart_col2:
                         name=app_name, mode="lines",
                         line=dict(color=COLORS[i % len(COLORS)], width=2.5),
                         fill="tozeroy",
-                        fillcolor=f"rgba({int(COLORS[i % len(COLORS)][1:3],16)},{int(COLORS[i % len(COLORS)][3:5],16)},{int(COLORS[i % len(COLORS)][5:7],16)},0.15)",
+                        fillcolor=f"rgba({int(COLORS[i % len(COLORS)][1:3],16)},{int(COLORS[i % len(COLORS)][3:5],16)},{int(COLORS[i % len(COLORS)][5:7],16)},0.12)",
                     ))
                 apply_chart_style(fig)
                 st.plotly_chart(fig, use_container_width=True)
