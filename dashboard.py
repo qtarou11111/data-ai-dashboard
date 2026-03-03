@@ -26,10 +26,27 @@ APPS_DB_PATH = Path(__file__).parent / "apps_db.json"
 COLORS = ["#00d4ff", "#00e676", "#7c3aed", "#f59e42", "#ef4444", "#f472b6"]
 
 
+# ─── セッション初期化（一度だけ） ───
+def init_state():
+    defaults = {
+        "selected_apps": [],
+        "dl_df": None,
+        "dau_df": None,
+        "last_updated": None,
+        "last_country": "JP",
+        "last_start": "",
+        "last_end": "",
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+
+init_state()
+
+
 # ─── アプリDB ───
 @st.cache_data(ttl=600)
 def load_apps_db():
-    """apps_db.json を読み込む。旧形式(配列)の場合は新形式に変換。"""
     if APPS_DB_PATH.exists():
         data = json.loads(APPS_DB_PATH.read_text(encoding="utf-8"))
         if isinstance(data, list):
@@ -45,14 +62,25 @@ def save_apps_db(data):
     load_apps_db.clear()
 
 
-def load_groups():
-    return load_apps_db().get("groups", [])
-
-
 def save_groups(groups):
     data = load_apps_db()
     data["groups"] = groups
     save_apps_db(data)
+
+
+# ─── ユーティリティ: アプリ一意キー ───
+def app_key(app):
+    return f"{app['app_id']}|{app['market']}"
+
+
+def apps_to_labels(apps, app_options_map):
+    """selected_apps → multiselect のラベルリスト"""
+    labels = []
+    for a in apps:
+        k = app_key(a)
+        if k in app_options_map:
+            labels.append(app_options_map[k]["label_key"])
+    return labels
 
 
 # ─── API ───
@@ -68,11 +96,8 @@ def get_headers():
 def fetch_downloads(app_id, market, country, start_date, end_date, _v=2):
     url = f"{BASE_URL}/intelligence/apps/{market}/app/{app_id}/history"
     params = {
-        "countries": country,
-        "feeds": "downloads",
-        "granularity": "daily",
-        "start_date": start_date,
-        "end_date": end_date,
+        "countries": country, "feeds": "downloads",
+        "granularity": "daily", "start_date": start_date, "end_date": end_date,
     }
     resp = requests.get(url, headers=get_headers(), params=params)
     resp.raise_for_status()
@@ -83,10 +108,8 @@ def fetch_downloads(app_id, market, country, start_date, end_date, _v=2):
 def fetch_active_users(app_id, market, country, start_date, end_date, _v=2):
     url = f"{BASE_URL}/intelligence/apps/{market}/app/{app_id}/usage-history"
     params = {
-        "countries": country,
-        "granularity": "daily",
-        "start_date": start_date,
-        "end_date": end_date,
+        "countries": country, "granularity": "daily",
+        "start_date": start_date, "end_date": end_date,
     }
     resp = requests.get(url, headers=get_headers(), params=params)
     resp.raise_for_status()
@@ -178,7 +201,6 @@ st.markdown("""
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap');
 
-  /* ── Global Dark Theme ── */
   .block-container { padding-top: 1.5rem; max-width: 1400px; }
   html, body, [class*="st-"] {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -190,14 +212,12 @@ st.markdown("""
   header[data-testid="stHeader"] { background: #080c16 !important; }
   p, span, label, li, td, th, caption, .stMarkdown { color: #e2e8f0 !important; }
 
-  /* ── Sidebar ── */
   [data-testid="stSidebar"] { background: #0f1729 !important; border-right: 1px solid #1e293b; }
   [data-testid="stSidebar"] > div:first-child { padding-top: 1rem; }
   [data-testid="stSidebar"] p, [data-testid="stSidebar"] span,
   [data-testid="stSidebar"] label { color: #cbd5e1 !important; }
   [data-testid="stSidebar"] .stCaption p { color: #64748b !important; font-size: 0.7rem; letter-spacing: 0.08em; }
 
-  /* ── All inputs / selects / buttons ── */
   input, textarea, [data-baseweb="input"] > div,
   [data-baseweb="select"] > div, [data-baseweb="popover"] > div {
     background: #131b2e !important; color: #f1f5f9 !important;
@@ -211,15 +231,10 @@ st.markdown("""
   [data-baseweb="tag"] { background: #1e293b !important; color: #e2e8f0 !important; }
   [data-baseweb="tag"] span { color: #e2e8f0 !important; }
 
-  /* Date input */
   .stDateInput > div > div { background: #131b2e !important; border-color: #334155 !important; }
   .stDateInput input { color: #f1f5f9 !important; }
-
-  /* Radio / Checkbox */
   .stRadio label span, .stCheckbox label span { color: #cbd5e1 !important; }
-  .stRadio [role="radiogroup"] label[data-checked="true"] span { color: #00d4ff !important; }
 
-  /* Buttons */
   button[kind="primary"], .stButton button[kind="primary"] {
     background: #00d4ff !important; color: #080c16 !important;
     border: none !important; font-weight: 600 !important;
@@ -231,79 +246,56 @@ st.markdown("""
   }
   .stButton button:not([kind="primary"]):hover { background: #334155 !important; }
 
-  /* Tabs */
   [data-testid="stTabs"] [data-baseweb="tab-list"] { gap: 0; border-bottom: 1px solid #1e293b; }
   [data-testid="stTabs"] [data-baseweb="tab"] {
-    font-size: 0.82rem; font-weight: 500; padding: 0.5rem 1.2rem;
-    color: #94a3b8 !important;
+    font-size: 0.82rem; font-weight: 500; padding: 0.5rem 1.2rem; color: #94a3b8 !important;
   }
   [data-testid="stTabs"] [aria-selected="true"] {
     color: #00d4ff !important; border-bottom-color: #00d4ff !important; font-weight: 600;
   }
   .stTabs [data-baseweb="tab-panel"] { background: transparent !important; }
-
-  /* DataFrame */
   div[data-testid="stDataFrame"] { border: 1px solid #1e293b; border-radius: 8px; }
-  .stDataFrame td, .stDataFrame th { color: #e2e8f0 !important; }
-
-  /* Download / Export buttons */
   .stDownloadButton button {
-    background: #1e293b !important; color: #e2e8f0 !important;
-    border: 1px solid #334155 !important;
+    background: #1e293b !important; color: #e2e8f0 !important; border: 1px solid #334155 !important;
   }
-
-  /* Info / Warning / Error boxes */
   [data-testid="stAlert"] { background: #131b2e !important; border: 1px solid #1e293b !important; color: #e2e8f0 !important; }
-
-  /* Progress bar */
   .stProgress > div > div { background: #1e293b !important; }
   .stProgress > div > div > div { background: #00d4ff !important; }
-
-  /* Multiselect */
   .stMultiSelect > div > div { background: #131b2e !important; border-color: #334155 !important; }
   .stMultiSelect span { color: #e2e8f0 !important; }
 
-  /* ── Header ── */
   .dash-header {
     display: flex; align-items: center; justify-content: space-between;
-    margin: 0 0 1.2rem 0; flex-wrap: wrap; gap: 0.5rem;
-    padding-bottom: 1rem; border-bottom: 1px solid #1e293b;
+    margin: 0 0 1.2rem 0; padding-bottom: 1rem; border-bottom: 1px solid #1e293b;
   }
   .dash-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.6rem; font-weight: 800; color: #f1f5f9 !important;
-    letter-spacing: -0.02em; margin: 0; line-height: 1.3;
+    font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800;
+    color: #f1f5f9 !important; letter-spacing: -0.02em; margin: 0;
   }
   .dash-title span { color: #00d4ff; }
-  .dash-subtitle {
-    font-size: 0.8rem; color: #94a3b8 !important; font-weight: 400; margin: 0.15rem 0 0 0;
-  }
+  .dash-subtitle { font-size: 0.8rem; color: #94a3b8 !important; margin: 0.15rem 0 0 0; }
 
-  /* ── Status Badges ── */
   .badge-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; align-items: center; }
   .badge {
     display: inline-flex; align-items: center; gap: 0.3rem;
     padding: 0.25rem 0.7rem; border-radius: 9999px;
-    font-size: 0.72rem; font-weight: 500; line-height: 1.4;
+    font-size: 0.72rem; font-weight: 500;
   }
   .badge-outline { border: 1px solid #334155; color: #94a3b8 !important; background: #131b2e; }
-  .badge-green  { background: #042f1e; color: #00e676 !important; border: 1px solid #065f3a; }
-  .badge-blue   { background: #041e30; color: #00d4ff !important; border: 1px solid #0a3d5c; }
+  .badge-green { background: #042f1e; color: #00e676 !important; border: 1px solid #065f3a; }
+  .badge-blue { background: #041e30; color: #00d4ff !important; border: 1px solid #0a3d5c; }
   .badge-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
   .badge-dot-green { background: #00e676; }
   .badge-dot-amber { background: #f59e42; }
 
-  /* ── App Tags ── */
   .app-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
   .app-tag {
     display: inline-flex; align-items: center; gap: 0.35rem;
     padding: 0.35rem 0.85rem; border-radius: 8px;
-    font-size: 0.8rem; font-weight: 600;
-    border: 1px solid; transition: all 0.15s;
+    font-size: 0.8rem; font-weight: 600; border: 1px solid;
   }
   .app-tag-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
-  /* ── KPI Cards ── */
   .kpi-card {
     background: #0f1729; border: 1px solid #1e293b; border-radius: 14px;
     padding: 1.25rem 1.5rem; position: relative; overflow: hidden;
@@ -312,36 +304,21 @@ st.markdown("""
     content: ''; position: absolute; top: 0; left: 0; right: 0;
     height: 3px; border-radius: 14px 14px 0 0;
   }
-  .kpi-accent-cyan::before   { background: linear-gradient(90deg, #00d4ff, #00d4ff88); }
-  .kpi-accent-green::before  { background: linear-gradient(90deg, #00e676, #00e67688); }
+  .kpi-accent-cyan::before { background: linear-gradient(90deg, #00d4ff, #00d4ff88); }
+  .kpi-accent-green::before { background: linear-gradient(90deg, #00e676, #00e67688); }
   .kpi-accent-purple::before { background: linear-gradient(90deg, #7c3aed, #7c3aed88); }
   .kpi-accent-orange::before { background: linear-gradient(90deg, #f59e42, #f59e4288); }
-  .kpi-label {
-    font-size: 0.78rem; color: #94a3b8 !important; font-weight: 500;
-    margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.04em;
-  }
-  .kpi-value {
-    font-family: 'DM Mono', monospace; font-size: 1.85rem; font-weight: 500;
-    color: #f8fafc !important; margin: 0; letter-spacing: -0.02em;
-  }
+  .kpi-label { font-size: 0.78rem; color: #94a3b8 !important; font-weight: 500; margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.04em; }
+  .kpi-value { font-family: 'DM Mono', monospace; font-size: 1.85rem; font-weight: 500; color: #f8fafc !important; margin: 0; }
   .kpi-sub { font-size: 0.75rem; color: #64748b !important; margin: 0.25rem 0 0 0; }
 
-  /* ── Section headers ── */
-  .section-header {
-    font-family: 'Syne', sans-serif;
-    font-size: 1rem; font-weight: 700; color: #f1f5f9 !important;
-    margin: 0.5rem 0 0.5rem 0; padding: 0;
-  }
-
-  /* ── Divider ── */
+  .section-header { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; color: #f1f5f9 !important; margin: 0.5rem 0; }
   .section-divider { border: none; border-top: 1px solid #1e293b; margin: 1.5rem 0 1rem 0; }
 
-  /* ── Sidebar details ── */
-  [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { margin-bottom: 0; }
   [data-testid="stSidebar"] .sidebar-logo {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.15rem; font-weight: 700; color: #00d4ff !important;
-    padding: 0.5rem 0 0.75rem; border-bottom: 1px solid #1e293b; margin-bottom: 0.75rem;
+    font-family: 'Syne', sans-serif; font-size: 1.15rem; font-weight: 700;
+    color: #00d4ff !important; padding: 0.5rem 0 0.75rem;
+    border-bottom: 1px solid #1e293b; margin-bottom: 0.75rem;
   }
   .selected-app {
     display: flex; align-items: center; gap: 0.5rem;
@@ -352,22 +329,33 @@ st.markdown("""
   .selected-app-name { font-size: 0.82rem; font-weight: 500; color: #f1f5f9 !important; flex: 1; margin: 0; }
   .selected-app-market { font-size: 0.68rem; color: #64748b !important; margin: 0; }
 
-  /* ── Control bar ── */
-  .control-bar {
-    background: #0f1729; border: 1px solid #1e293b; border-radius: 14px;
-    padding: 1rem 1.5rem; margin-bottom: 1.2rem;
-  }
   .control-label {
     font-size: 0.72rem; color: #64748b !important; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 0.4rem 0;
+    text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 0.3rem 0;
   }
 
-  /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: #080c16; }
   ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
 </style>
 """, unsafe_allow_html=True)
+
+
+# ─── データ読み込み ───
+db_data = load_apps_db()
+apps_db = db_data["apps"]
+groups = db_data.get("groups", [])
+
+# アプリオプションマップを作成 (一度だけ)
+# label_key = 表示用ラベル, app_key = 一意キー
+app_options_by_label = {}   # label_key → app dict
+app_options_by_key = {}     # "app_id|market" → {"label_key": ..., ...app}
+for a in apps_db:
+    name = a.get("name") or a["app_id"]
+    market_short = "iOS" if a.get("market") == "ios" else "Android"
+    label_key = f"{name} ({market_short})"
+    app_options_by_label[label_key] = a
+    app_options_by_key[app_key(a)] = {**a, "label_key": label_key}
 
 
 # ─── ヘッダー ───
@@ -381,19 +369,129 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ─── サイドバー ───
-st.sidebar.markdown('<p class="sidebar-logo">App Intelligence</p>', unsafe_allow_html=True)
+# ═══════════════════════════════════════════════════════════════
+# メインエリア — コントロールパネル
+# ═══════════════════════════════════════════════════════════════
 
-db_data = load_apps_db()
-apps_db = db_data["apps"]
-groups = db_data.get("groups", [])
+# --- アプリ選択 + グループ + 日付 + Fetch を1つのブロックに ---
 
-if "selected_apps" not in st.session_state:
-    st.session_state.selected_apps = []
+# Row 1: アプリ選択 (multiselect)
+st.markdown('<p class="control-label">Apps — アプリを選択（複数可）</p>', unsafe_allow_html=True)
 
-# (グループ管理はメインエリアのコントロールバーに移動)
+# multiselect の初期値を selected_apps から計算
+initial_labels = apps_to_labels(st.session_state.selected_apps, app_options_by_key)
 
-# --- 選択済みアプリ ---
+# multiselect の値が変わったら selected_apps を更新する (callback)
+def on_app_select_change():
+    labels = st.session_state._ms_apps
+    new_apps = []
+    for lbl in labels:
+        if lbl in app_options_by_label:
+            a = app_options_by_label[lbl]
+            new_apps.append({
+                "app_id": a["app_id"],
+                "market": a["market"],
+                "label": a.get("name") or a["app_id"],
+            })
+    st.session_state.selected_apps = new_apps
+
+# 初期値をセット (widget がまだ無い場合のみ)
+if "_ms_apps" not in st.session_state:
+    st.session_state._ms_apps = initial_labels
+
+st.multiselect(
+    "Apps",
+    options=sorted(app_options_by_label.keys()),
+    key="_ms_apps",
+    label_visibility="collapsed",
+    on_change=on_app_select_change,
+)
+
+# Row 2: グループ + 日付 + Fetch
+gc1, gc2, gc3, gc4, gc5, gc6 = st.columns([1.5, 1.5, 1, 1.2, 1.2, 0.8])
+
+with gc1:
+    st.markdown('<p class="control-label">Load Group</p>', unsafe_allow_html=True)
+    group_names = ["--"] + [g["name"] for g in groups]
+    sel_group = st.selectbox("Group", group_names, label_visibility="collapsed", key="_sel_group")
+
+with gc2:
+    st.markdown('<p class="control-label">Save Group</p>', unsafe_allow_html=True)
+    new_grp_cols = st.columns([3, 1])
+    with new_grp_cols[0]:
+        new_group_name = st.text_input("Name", placeholder="New group name...", label_visibility="collapsed", key="_new_grp_name")
+    with new_grp_cols[1]:
+        save_grp_clicked = st.button("Save", key="_save_grp", use_container_width=True)
+
+today = datetime.now().date()
+
+with gc3:
+    st.markdown('<p class="control-label">Country</p>', unsafe_allow_html=True)
+    country = st.text_input("Country", value="JP", label_visibility="collapsed", key="_country")
+
+with gc4:
+    st.markdown('<p class="control-label">Start</p>', unsafe_allow_html=True)
+    start_date = st.date_input("Start", value=today - timedelta(days=30), label_visibility="collapsed", key="_start")
+
+with gc5:
+    st.markdown('<p class="control-label">End</p>', unsafe_allow_html=True)
+    end_date = st.date_input("End", value=today - timedelta(days=1), label_visibility="collapsed", key="_end")
+
+with gc6:
+    st.markdown('<p class="control-label">&nbsp;</p>', unsafe_allow_html=True)
+    fetch_clicked = st.button("Fetch", type="primary", use_container_width=True, key="_fetch")
+
+
+# --- グループ読み込み処理 ---
+if sel_group != "--":
+    group = next((g for g in groups if g["name"] == sel_group), None)
+    if group and st.session_state.get("_last_group") != sel_group:
+        st.session_state.selected_apps = [dict(a) for a in group["apps"]]
+        st.session_state._last_group = sel_group
+        # multiselect の値も更新
+        st.session_state._ms_apps = apps_to_labels(st.session_state.selected_apps, app_options_by_key)
+        st.rerun()
+else:
+    st.session_state._last_group = None
+
+# --- グループ保存処理 ---
+if save_grp_clicked:
+    if not st.session_state.selected_apps:
+        st.toast("アプリを選択してから保存してください。", icon="⚠️")
+    elif not new_group_name:
+        st.toast("グループ名を入力してください。", icon="⚠️")
+    elif new_group_name in {g["name"] for g in groups}:
+        st.toast("同じ名前のグループが既に存在します。", icon="⚠️")
+    else:
+        new_group = {
+            "id": str(uuid.uuid4()),
+            "name": new_group_name,
+            "apps": [dict(a) for a in st.session_state.selected_apps],
+        }
+        groups.append(new_group)
+        save_groups(groups)
+        st.toast(f"グループ「{new_group_name}」を保存しました!", icon="✅")
+        st.rerun()
+
+# --- グループ削除ボタン (選択中のみ) ---
+if sel_group != "--":
+    if st.button(f"🗑️ グループ「{sel_group}」を削除", key="_del_grp"):
+        groups = [g for g in groups if g["name"] != sel_group]
+        save_groups(groups)
+        st.session_state._last_group = None
+        st.toast(f"削除しました。", icon="🗑️")
+        st.rerun()
+
+st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════
+# サイドバー — 検索 + 手動追加 (補助的)
+# ═══════════════════════════════════════════════════════════════
+
+st.sidebar.markdown('<p class="sidebar-logo">App Search</p>', unsafe_allow_html=True)
+
+# --- 選択済みアプリ表示 ---
 if st.session_state.selected_apps:
     st.sidebar.caption("SELECTED APPS")
     for i, app in enumerate(st.session_state.selected_apps):
@@ -409,16 +507,20 @@ if st.session_state.selected_apps:
                 unsafe_allow_html=True,
             )
         with col_rm:
-            if st.button("✕", key=f"rm_{i}", help="Remove this app"):
+            if st.button("✕", key=f"rm_{i}", help="Remove"):
                 st.session_state.selected_apps.pop(i)
+                st.session_state._ms_apps = apps_to_labels(
+                    st.session_state.selected_apps, app_options_by_key
+                )
                 st.rerun()
     if st.sidebar.button("Clear all", key="clear_all"):
         st.session_state.selected_apps = []
+        st.session_state._ms_apps = []
         st.rerun()
     st.sidebar.markdown("---")
 
 # --- アプリ検索 ---
-st.sidebar.caption("SEARCH APPS")
+st.sidebar.caption("SEARCH & ADD APPS")
 if apps_db:
     search_market = st.sidebar.radio(
         "Market", ["All", "iOS", "Android"], horizontal=True, label_visibility="collapsed",
@@ -431,7 +533,6 @@ if apps_db:
         from difflib import SequenceMatcher
 
         q = search_query.lower()
-
         market_filter = {"iOS": "ios", "Android": "google-play"}.get(search_market)
         pool = apps_db if not market_filter else [a for a in apps_db if a.get("market") == market_filter]
 
@@ -447,8 +548,7 @@ if apps_db:
             for a in pool:
                 name = (a.get("name") or "").lower()
                 ratio = SequenceMatcher(None, q, name).ratio()
-                words = name.split()
-                if any(w.startswith(q) for w in words):
+                if any(w.startswith(q) for w in name.split()):
                     ratio += 0.3
                 if ratio >= 0.35:
                     scored.append((ratio, a))
@@ -471,12 +571,15 @@ if apps_db:
             for a in filtered:
                 name = a.get("name") or a["app_id"]
                 market_icon = "🍎" if a.get("market") == "ios" else "🤖"
-                display = f"{market_icon} {name}"
                 btn_key = f"add_{a['app_id']}_{a['market']}"
-                if st.sidebar.button(f"＋  {display}", key=btn_key, use_container_width=True):
+                if st.sidebar.button(f"＋  {market_icon} {name}", key=btn_key, use_container_width=True):
                     entry = {"app_id": a["app_id"], "market": a["market"], "label": name}
                     if entry not in st.session_state.selected_apps:
                         st.session_state.selected_apps.append(entry)
+                        # multiselect も同期
+                        st.session_state._ms_apps = apps_to_labels(
+                            st.session_state.selected_apps, app_options_by_key
+                        )
                     st.rerun()
         else:
             st.sidebar.caption("No results found.")
@@ -497,6 +600,9 @@ if show_manual:
             entry = {"app_id": manual_id, "market": manual_market, "label": label}
             if entry not in st.session_state.selected_apps:
                 st.session_state.selected_apps.append(entry)
+                st.session_state._ms_apps = apps_to_labels(
+                    st.session_state.selected_apps, app_options_by_key
+                )
             st.rerun()
 
 # --- 同カテゴリ レコメンド ---
@@ -525,123 +631,16 @@ if st.session_state.selected_apps and apps_db:
                     entry = {"app_id": a["app_id"], "market": a["market"], "label": name}
                     if entry not in st.session_state.selected_apps:
                         st.session_state.selected_apps.append(entry)
+                        st.session_state._ms_apps = apps_to_labels(
+                            st.session_state.selected_apps, app_options_by_key
+                        )
                     st.rerun()
 
 
 # ═══════════════════════════════════════════════════════════════
-# メインエリア — コントロールバー
+# ステータスバッジ + メインコンテンツ
 # ═══════════════════════════════════════════════════════════════
 
-# --- Row 1: グループ読み込み + 保存 ---
-st.markdown('<div class="control-bar">', unsafe_allow_html=True)
-
-grp_c1, grp_c2, grp_c3, grp_c4 = st.columns([2, 2, 1.5, 1])
-
-with grp_c1:
-    st.markdown('<p class="control-label">Group</p>', unsafe_allow_html=True)
-    group_names = ["--"] + [g["name"] for g in groups]
-    selected_group = st.selectbox(
-        "Group", group_names, label_visibility="collapsed", key="main_group_select",
-    )
-    if selected_group != "--":
-        group = next((g for g in groups if g["name"] == selected_group), None)
-        if group and st.session_state.get("_last_group") != selected_group:
-            st.session_state.selected_apps = [dict(a) for a in group["apps"]]
-            st.session_state._last_group = selected_group
-            st.rerun()
-    else:
-        st.session_state._last_group = None
-
-with grp_c2:
-    st.markdown('<p class="control-label">Save New Group</p>', unsafe_allow_html=True)
-    new_group_name = st.text_input(
-        "Group name", placeholder="Enter group name...",
-        label_visibility="collapsed", key="new_group_name",
-    )
-
-with grp_c3:
-    st.markdown('<p class="control-label">&nbsp;</p>', unsafe_allow_html=True)
-    if st.button("Save Group", use_container_width=True, key="save_group"):
-        if not st.session_state.selected_apps:
-            st.toast("アプリを選択してからグループを保存してください。", icon="⚠️")
-        elif not new_group_name:
-            st.toast("グループ名を入力してください。", icon="⚠️")
-        elif new_group_name in {g["name"] for g in groups}:
-            st.toast("同じ名前のグループが既に存在します。", icon="⚠️")
-        else:
-            new_group = {
-                "id": str(uuid.uuid4()),
-                "name": new_group_name,
-                "apps": [dict(a) for a in st.session_state.selected_apps],
-            }
-            groups.append(new_group)
-            save_groups(groups)
-            st.toast(f"グループ「{new_group_name}」を保存しました。", icon="✅")
-            st.rerun()
-
-with grp_c4:
-    st.markdown('<p class="control-label">&nbsp;</p>', unsafe_allow_html=True)
-    if selected_group != "--":
-        if st.button("Delete Group", use_container_width=True, key="delete_group"):
-            groups = [g for g in groups if g["name"] != selected_group]
-            save_groups(groups)
-            st.session_state._last_group = None
-            st.toast(f"グループ「{selected_group}」を削除しました。", icon="🗑️")
-            st.rerun()
-    else:
-        st.button("Delete Group", use_container_width=True, key="delete_group_disabled", disabled=True)
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-# --- Row 2: アプリ選択 + 日付 + フェッチ ---
-st.markdown('<div class="control-bar">', unsafe_allow_html=True)
-
-ctrl_c1, ctrl_c2, ctrl_c3, ctrl_c4, ctrl_c5 = st.columns([3, 1.5, 1.5, 1, 1])
-
-with ctrl_c1:
-    st.markdown('<p class="control-label">Apps</p>', unsafe_allow_html=True)
-    if apps_db:
-        app_options = {f"{a.get('name', a['app_id'])} ({a['market']})": a for a in apps_db}
-        current_labels = [
-            f"{a['label']} ({a['market']})" for a in st.session_state.selected_apps
-        ]
-        selected_labels = st.multiselect(
-            "Apps", options=list(app_options.keys()),
-            default=[l for l in current_labels if l in app_options],
-            label_visibility="collapsed", key="main_app_select",
-        )
-        new_apps = []
-        for label in selected_labels:
-            a = app_options[label]
-            new_apps.append({"app_id": a["app_id"], "market": a["market"], "label": a.get("name", a["app_id"])})
-        if new_apps != st.session_state.selected_apps:
-            st.session_state.selected_apps = new_apps
-            st.rerun()
-    else:
-        st.caption("App DB empty — use sidebar search")
-
-today = datetime.now().date()
-
-with ctrl_c2:
-    st.markdown('<p class="control-label">Start</p>', unsafe_allow_html=True)
-    start_date = st.date_input("Start", value=today - timedelta(days=30), label_visibility="collapsed", key="main_start")
-
-with ctrl_c3:
-    st.markdown('<p class="control-label">End</p>', unsafe_allow_html=True)
-    end_date = st.date_input("End", value=today - timedelta(days=1), label_visibility="collapsed", key="main_end")
-
-with ctrl_c4:
-    st.markdown('<p class="control-label">Country</p>', unsafe_allow_html=True)
-    country = st.text_input("Country", value="JP", label_visibility="collapsed", key="main_country")
-
-with ctrl_c5:
-    st.markdown('<p class="control-label">&nbsp;</p>', unsafe_allow_html=True)
-    fetch_clicked = st.button("Fetch", type="primary", use_container_width=True, key="main_fetch")
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-
-# ─── ステータスバッジ ───
 def render_badges():
     badges = ""
     updated_at = st.session_state.get("last_updated")
@@ -665,8 +664,10 @@ def render_badges():
     if s and e:
         badges += f'<span class="badge badge-outline">{s} → {e}</span>'
     badges += f'<span class="badge badge-outline">DB: {len(apps_db):,} apps</span>'
+    n_selected = len(st.session_state.selected_apps)
+    if n_selected:
+        badges += f'<span class="badge badge-outline">{n_selected} apps selected</span>'
     st.markdown(f'<div class="badge-row">{badges}</div>', unsafe_allow_html=True)
-
 
 render_badges()
 
@@ -683,13 +684,9 @@ if st.session_state.selected_apps:
     st.markdown(f'<div class="app-tags">{tags_html}</div>', unsafe_allow_html=True)
 
 
-# ─── メインエリア ───
+# ─── データ取得 ───
 if not st.session_state.selected_apps:
-    st.info("サイドバーまたは上部のコントロールバーからアプリを選択してください。")
-    st.stop()
-
-if not fetch_clicked and "dl_df" not in st.session_state:
-    st.info("上部の **Fetch** ボタンを押してデータを取得してください。")
+    st.info("上部のセレクターまたはサイドバーからアプリを選択してください。")
     st.stop()
 
 if fetch_clicked:
@@ -710,11 +707,15 @@ if fetch_clicked:
             dl_frames.append(parse_downloads(dl_data, app["label"]))
         except requests.exceptions.HTTPError as e:
             errors.append(f"[{app['label']}] Downloads: {friendly_error(e)}")
+        except Exception as e:
+            errors.append(f"[{app['label']}] Downloads: {str(e)}")
         try:
             dau_data = fetch_active_users(app["app_id"], app["market"], country, start_str, end_str)
             dau_frames.append(parse_active_users(dau_data, app["label"]))
         except requests.exceptions.HTTPError as e:
             errors.append(f"[{app['label']}] DAU: {friendly_error(e)}")
+        except Exception as e:
+            errors.append(f"[{app['label']}] DAU: {str(e)}")
 
     progress.empty()
 
@@ -729,8 +730,18 @@ if fetch_clicked:
     st.session_state.last_end = end_str
     st.rerun()
 
-dl_df = st.session_state.get("dl_df", pd.DataFrame())
-dau_df = st.session_state.get("dau_df", pd.DataFrame())
+# ─── データがまだ無い場合 ───
+dl_df = st.session_state.get("dl_df")
+dau_df = st.session_state.get("dau_df")
+
+if dl_df is None and dau_df is None:
+    st.info("**Fetch** ボタンを押してデータを取得してください。")
+    st.stop()
+
+if dl_df is None:
+    dl_df = pd.DataFrame()
+if dau_df is None:
+    dau_df = pd.DataFrame()
 
 # ─── KPI カード ───
 if not dl_df.empty or not dau_df.empty:
@@ -793,12 +804,13 @@ with chart_col1:
                 fig = go.Figure()
                 for i, app_name in enumerate(plot_df["app"].unique()):
                     app_data = plot_df[plot_df["app"] == app_name]
+                    c = COLORS[i % len(COLORS)]
                     fig.add_trace(go.Scatter(
                         x=app_data["date"], y=app_data["downloads"],
                         name=app_name, mode="lines",
-                        line=dict(color=COLORS[i % len(COLORS)], width=2.5),
+                        line=dict(color=c, width=2.5),
                         fill="tozeroy",
-                        fillcolor=f"rgba({int(COLORS[i % len(COLORS)][1:3],16)},{int(COLORS[i % len(COLORS)][3:5],16)},{int(COLORS[i % len(COLORS)][5:7],16)},0.12)",
+                        fillcolor=f"rgba({int(c[1:3],16)},{int(c[3:5],16)},{int(c[5:7],16)},0.12)",
                     ))
                 apply_chart_style(fig)
                 st.plotly_chart(fig, use_container_width=True)
@@ -816,12 +828,13 @@ with chart_col2:
                 fig = go.Figure()
                 for i, app_name in enumerate(plot_df["app"].unique()):
                     app_data = plot_df[plot_df["app"] == app_name]
+                    c = COLORS[i % len(COLORS)]
                     fig.add_trace(go.Scatter(
                         x=app_data["date"], y=app_data["dau"],
                         name=app_name, mode="lines",
-                        line=dict(color=COLORS[i % len(COLORS)], width=2.5),
+                        line=dict(color=c, width=2.5),
                         fill="tozeroy",
-                        fillcolor=f"rgba({int(COLORS[i % len(COLORS)][1:3],16)},{int(COLORS[i % len(COLORS)][3:5],16)},{int(COLORS[i % len(COLORS)][5:7],16)},0.12)",
+                        fillcolor=f"rgba({int(c[1:3],16)},{int(c[3:5],16)},{int(c[5:7],16)},0.12)",
                     ))
                 apply_chart_style(fig)
                 st.plotly_chart(fig, use_container_width=True)
@@ -836,19 +849,13 @@ if not dl_df.empty or not dau_df.empty:
     with tab_dl:
         if not dl_df.empty:
             st.dataframe(dl_df, use_container_width=True, hide_index=True)
-            st.download_button(
-                "Export CSV", dl_df.to_csv(index=False).encode("utf-8"),
-                "downloads.csv", "text/csv",
-            )
+            st.download_button("Export CSV", dl_df.to_csv(index=False).encode("utf-8"), "downloads.csv", "text/csv")
         else:
             st.caption("No data")
 
     with tab_dau:
         if not dau_df.empty:
             st.dataframe(dau_df, use_container_width=True, hide_index=True)
-            st.download_button(
-                "Export CSV", dau_df.to_csv(index=False).encode("utf-8"),
-                "dau.csv", "text/csv",
-            )
+            st.download_button("Export CSV", dau_df.to_csv(index=False).encode("utf-8"), "dau.csv", "text/csv")
         else:
             st.caption("No data")
