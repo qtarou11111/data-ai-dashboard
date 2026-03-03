@@ -134,15 +134,12 @@ def parse_downloads(data, label):
 
 
 def parse_active_users(data, label):
-    has_total = any(item.get("device") == "ios" for item in data.get("list", []))
-    daily = {}
+    rows = []
     for item in data.get("list", []):
-        if has_total and item.get("device") != "ios":
-            continue
         date = item.get("date", "")
         users = _safe_int(item.get("active_users"))
-        daily[date] = daily.get(date, 0) + users
-    rows = [{"date": d, "dau": v, "app": label} for d, v in sorted(daily.items())]
+        device = item.get("device", "unknown")
+        rows.append({"date": date, "dau": users, "app": label, "device": device})
     return pd.DataFrame(rows)
 
 
@@ -315,6 +312,16 @@ st.markdown("""
     font-size: 0.72rem; color: #6b7280 !important; font-weight: 600;
     text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 0.3rem 0;
   }
+
+  /* ── Control Card ── */
+  .control-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -351,10 +358,7 @@ st.markdown("""
 # メインエリア — コントロールパネル
 # ═══════════════════════════════════════════════════════════════
 
-# --- アプリ選択 + グループ + 日付 + Fetch を1つのブロックに ---
-
-# Row 1: アプリ選択 (multiselect)
-st.markdown('<p class="control-label">Apps — アプリを選択（複数可）</p>', unsafe_allow_html=True)
+st.markdown('<div class="control-card">', unsafe_allow_html=True)
 
 # multiselect の初期値を selected_apps から計算
 initial_labels = apps_to_labels(st.session_state.selected_apps, app_options_by_key)
@@ -377,47 +381,58 @@ def on_app_select_change():
 if "_ms_apps" not in st.session_state:
     st.session_state._ms_apps = initial_labels
 
-st.multiselect(
-    "Apps",
-    options=sorted(app_options_by_label.keys()),
-    key="_ms_apps",
-    label_visibility="collapsed",
-    on_change=on_app_select_change,
-)
+# Row 1: アプリ選択 (2/3) + グループ選択+削除 (1/3)
+row1_left, row1_right = st.columns([2, 1])
 
-# Row 2: グループ + 日付 + Fetch
-gc1, gc2, gc3, gc4, gc5, gc6 = st.columns([1.5, 1.5, 1, 1.2, 1.2, 0.8])
+with row1_left:
+    st.markdown('<p class="control-label">Apps — アプリを選択（複数可）</p>', unsafe_allow_html=True)
+    st.multiselect(
+        "Apps",
+        options=sorted(app_options_by_label.keys()),
+        key="_ms_apps",
+        label_visibility="collapsed",
+        on_change=on_app_select_change,
+    )
 
-with gc1:
-    st.markdown('<p class="control-label">Load Group</p>', unsafe_allow_html=True)
+with row1_right:
+    st.markdown('<p class="control-label">Group</p>', unsafe_allow_html=True)
     group_names = ["--"] + [g["name"] for g in groups]
-    sel_group = st.selectbox("Group", group_names, label_visibility="collapsed", key="_sel_group")
+    grp_sel_col, grp_del_col = st.columns([3, 1])
+    with grp_sel_col:
+        sel_group = st.selectbox("Group", group_names, label_visibility="collapsed", key="_sel_group")
+    with grp_del_col:
+        st.markdown('<p class="control-label">&nbsp;</p>', unsafe_allow_html=True)
+        del_grp_clicked = st.button("🗑️", key="_del_grp", use_container_width=True, disabled=(sel_group == "--"))
 
-with gc2:
-    st.markdown('<p class="control-label">Save Group</p>', unsafe_allow_html=True)
-    new_grp_cols = st.columns([3, 1])
-    with new_grp_cols[0]:
-        new_group_name = st.text_input("Name", placeholder="New group name...", label_visibility="collapsed", key="_new_grp_name")
-    with new_grp_cols[1]:
-        save_grp_clicked = st.button("Save", key="_save_grp", use_container_width=True)
-
+# Row 2: Country + Start + End + Fetch + グループ保存
 today = datetime.now().date()
+rc1, rc2, rc3, rc4, rc5 = st.columns([1, 1.5, 1.5, 1, 1.5])
 
-with gc3:
+with rc1:
     st.markdown('<p class="control-label">Country</p>', unsafe_allow_html=True)
     country = st.text_input("Country", value="JP", label_visibility="collapsed", key="_country")
 
-with gc4:
+with rc2:
     st.markdown('<p class="control-label">Start</p>', unsafe_allow_html=True)
     start_date = st.date_input("Start", value=today - timedelta(days=30), label_visibility="collapsed", key="_start")
 
-with gc5:
+with rc3:
     st.markdown('<p class="control-label">End</p>', unsafe_allow_html=True)
     end_date = st.date_input("End", value=today - timedelta(days=1), label_visibility="collapsed", key="_end")
 
-with gc6:
+with rc4:
     st.markdown('<p class="control-label">&nbsp;</p>', unsafe_allow_html=True)
     fetch_clicked = st.button("Fetch", type="primary", use_container_width=True, key="_fetch")
+
+with rc5:
+    st.markdown('<p class="control-label">Save Group</p>', unsafe_allow_html=True)
+    save_cols = st.columns([3, 1])
+    with save_cols[0]:
+        new_group_name = st.text_input("Name", placeholder="New group name...", label_visibility="collapsed", key="_new_grp_name")
+    with save_cols[1]:
+        save_grp_clicked = st.button("Save", key="_save_grp", use_container_width=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 
 # --- グループ読み込み処理 ---
@@ -451,16 +466,13 @@ if save_grp_clicked:
         st.toast(f"グループ「{new_group_name}」を保存しました!", icon="✅")
         st.rerun()
 
-# --- グループ削除ボタン (選択中のみ) ---
-if sel_group != "--":
-    if st.button(f"🗑️ グループ「{sel_group}」を削除", key="_del_grp"):
-        groups = [g for g in groups if g["name"] != sel_group]
-        save_groups(groups)
-        st.session_state._last_group = None
-        st.toast(f"削除しました。", icon="🗑️")
-        st.rerun()
-
-st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
+# --- グループ削除処理 ---
+if del_grp_clicked and sel_group != "--":
+    groups = [g for g in groups if g["name"] != sel_group]
+    save_groups(groups)
+    st.session_state._last_group = None
+    st.toast(f"削除しました。", icon="🗑️")
+    st.rerun()
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -721,6 +733,19 @@ if dl_df is None:
 if dau_df is None:
     dau_df = pd.DataFrame()
 
+# ─── デバイスフィルタ ───
+device_filter = st.radio(
+    "Device", ["All", "iOS", "Android"], horizontal=True, key="_device_filter",
+)
+if dau_df.empty:
+    dau_filtered = dau_df
+elif device_filter == "All":
+    dau_filtered = dau_df.groupby(["date", "app"], as_index=False)["dau"].sum()
+elif device_filter == "iOS":
+    dau_filtered = dau_df[dau_df["device"] == "ios"].copy()
+else:
+    dau_filtered = dau_df[dau_df["device"] == "android"].copy()
+
 # ─── KPI カード ───
 if not dl_df.empty or not dau_df.empty:
     kpi_cols = st.columns(4)
@@ -746,20 +771,21 @@ if not dl_df.empty or not dau_df.empty:
         )
 
     with kpi_cols[2]:
-        avg_dau = int(dau_df.groupby("date")["dau"].sum().mean()) if not dau_df.empty else 0
+        avg_dau = int(dau_filtered.groupby("date")["dau"].sum().mean()) if not dau_filtered.empty else 0
+        device_label = f" ({device_filter})" if device_filter != "All" else ""
         st.markdown(
             f'<div class="kpi-card kpi-accent-purple">'
-            f'<p class="kpi-label">Avg. DAU</p>'
+            f'<p class="kpi-label">Avg. DAU{device_label}</p>'
             f'<p class="kpi-value">{format_number(avg_dau)}</p>'
             f'<p class="kpi-sub">Per day</p></div>',
             unsafe_allow_html=True,
         )
 
     with kpi_cols[3]:
-        peak_dau = int(dau_df.groupby("date")["dau"].sum().max()) if not dau_df.empty else 0
+        peak_dau = int(dau_filtered.groupby("date")["dau"].sum().max()) if not dau_filtered.empty else 0
         st.markdown(
             f'<div class="kpi-card kpi-accent-orange">'
-            f'<p class="kpi-label">Peak DAU</p>'
+            f'<p class="kpi-label">Peak DAU{device_label}</p>'
             f'<p class="kpi-value">{format_number(peak_dau)}</p>'
             f'<p class="kpi-sub">Period max</p></div>',
             unsafe_allow_html=True,
@@ -794,13 +820,13 @@ with chart_col1:
                 st.plotly_chart(fig, use_container_width=True)
 
 with chart_col2:
-    if not dau_df.empty:
+    if not dau_filtered.empty:
         st.markdown('<p class="section-header">Active Users (DAU)</p>', unsafe_allow_html=True)
         tab_d2, tab_w2, tab_m2 = st.tabs(["Daily", "Weekly", "Monthly"])
         for tab, (label, freq) in zip([tab_d2, tab_w2, tab_m2], GRANULARITY_OPTIONS.items()):
             with tab:
                 agg_method = "sum" if freq is None else "mean"
-                plot_df = dau_df if freq is None else resample_df(dau_df, "dau", freq, agg=agg_method)
+                plot_df = dau_filtered if freq is None else resample_df(dau_filtered, "dau", freq, agg=agg_method)
                 if freq is not None:
                     plot_df["dau"] = plot_df["dau"].round(0).astype(int)
                 fig = go.Figure()
@@ -833,7 +859,13 @@ if not dl_df.empty or not dau_df.empty:
 
     with tab_dau:
         if not dau_df.empty:
-            st.dataframe(dau_df, use_container_width=True, hide_index=True)
-            st.download_button("Export CSV", dau_df.to_csv(index=False).encode("utf-8"), "dau.csv", "text/csv")
+            if device_filter == "All":
+                dau_display = dau_df
+            elif device_filter == "iOS":
+                dau_display = dau_df[dau_df["device"] == "ios"]
+            else:
+                dau_display = dau_df[dau_df["device"] == "android"]
+            st.dataframe(dau_display, use_container_width=True, hide_index=True)
+            st.download_button("Export CSV", dau_display.to_csv(index=False).encode("utf-8"), "dau.csv", "text/csv")
         else:
             st.caption("No data")
