@@ -716,16 +716,18 @@ if fetch_clicked:
 
     progress.empty()
 
-    for err in errors:
-        st.error(err)
-
     st.session_state.dl_df = pd.concat(dl_frames, ignore_index=True) if dl_frames else pd.DataFrame()
     st.session_state.dau_df = pd.concat(dau_frames, ignore_index=True) if dau_frames else pd.DataFrame()
     st.session_state.last_updated = datetime.now().strftime("%H:%M:%S")
     st.session_state.last_country = country
     st.session_state.last_start = start_str
     st.session_state.last_end = end_str
+    st.session_state.fetch_errors = errors
     st.rerun()
+
+# ─── Fetch エラー表示 ───
+for err in st.session_state.get("fetch_errors", []):
+    st.error(err)
 
 # ─── データがまだ無い場合 ───
 dl_df = st.session_state.get("dl_df")
