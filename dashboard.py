@@ -106,7 +106,9 @@ def fetch_downloads(app_id, market, country, start_date, end_date, _v=2):
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_active_users(app_id, market, country, start_date, end_date, _v=2):
-    url = f"{BASE_URL}/intelligence/apps/{market}/app/{app_id}/usage-history"
+    # Usage API は "google-play" ではなく "all-android" を要求する
+    usage_market = "all-android" if market == "google-play" else market
+    url = f"{BASE_URL}/intelligence/apps/{usage_market}/app/{app_id}/usage-history"
     params = {
         "countries": country, "granularity": "daily",
         "start_date": start_date, "end_date": end_date,
