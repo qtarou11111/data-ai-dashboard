@@ -49,10 +49,17 @@ def fetch_ranking(market, device, feed):
 
 
 def sync():
-    # 既存DBを読み込み
+    # 既存DBを読み込み（新形式 {apps, groups} と旧形式 [...] の両方に対応）
     existing = {}
+    groups = []
     if APPS_DB_PATH.exists():
-        for app in json.loads(APPS_DB_PATH.read_text(encoding="utf-8")):
+        raw = json.loads(APPS_DB_PATH.read_text(encoding="utf-8"))
+        if isinstance(raw, dict):
+            apps_list_raw = raw.get("apps", [])
+            groups = raw.get("groups", [])
+        else:
+            apps_list_raw = raw
+        for app in apps_list_raw:
             key = (str(app["app_id"]), app["market"])
             existing[key] = app
 
@@ -87,10 +94,11 @@ def sync():
                 }
                 new_count += 1
 
-    # 保存
+    # 保存（新形式: {apps, groups}）
     apps_list = sorted(existing.values(), key=lambda a: (a.get("name") or ""))
+    data = {"apps": apps_list, "groups": groups}
     APPS_DB_PATH.write_text(
-        json.dumps(apps_list, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     print(f"\n完了: 合計 {len(apps_list)} アプリ（新規 {new_count} 件）")
     print(f"保存先: {APPS_DB_PATH}")

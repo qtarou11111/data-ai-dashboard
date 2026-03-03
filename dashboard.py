@@ -7,6 +7,7 @@
 
 import json
 import os
+import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -29,15 +30,30 @@ COLORS_LIGHT = ["#EBF1FE", "#ECFDF5", "#FFF7ED", "#FEF2F2", "#F5F3FF", "#FDF2F8"
 # ─── アプリDB ───
 @st.cache_data(ttl=600)
 def load_apps_db():
+    """apps_db.json を読み込む。旧形式(配列)の場合は新形式に変換。"""
     if APPS_DB_PATH.exists():
-        return json.loads(APPS_DB_PATH.read_text(encoding="utf-8"))
-    return []
+        data = json.loads(APPS_DB_PATH.read_text(encoding="utf-8"))
+        if isinstance(data, list):
+            return {"apps": data, "groups": []}
+        return data
+    return {"apps": [], "groups": []}
 
 
-def save_apps_db(apps):
+def save_apps_db(data):
     APPS_DB_PATH.write_text(
-        json.dumps(apps, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+    load_apps_db.clear()
+
+
+def load_groups():
+    return load_apps_db().get("groups", [])
+
+
+def save_groups(groups):
+    data = load_apps_db()
+    data["groups"] = groups
+    save_apps_db(data)
 
 
 # ─── API ───
@@ -286,24 +302,92 @@ st.markdown("""
 # ─── サイドバー ───
 st.sidebar.markdown('<p class="sidebar-logo">App Intelligence</p>', unsafe_allow_html=True)
 
-apps_db = load_apps_db()
+db_data = load_apps_db()
+apps_db = db_data["apps"]
+groups = db_data.get("groups", [])
 
 if "selected_apps" not in st.session_state:
     st.session_state.selected_apps = []
+
+# --- グループ ---
+if groups:
+    st.sidebar.caption("GROUPS")
+    group_names = ["-- Select Group --"] + [g["name"] for g in groups]
+    selected_group = st.sidebar.selectbox(
+        "Group", group_names, label_visibility="collapsed", key="group_select",
+    )
+    if selected_group != "-- Select Group --":
+        group = next((g for g in groups if g["name"] == selected_group), None)
+        if group:
+            # グループ選択でアプリを即座に反映
+            if st.session_state.get("_last_group") != selected_group:
+                st.session_state.selected_apps = [dict(a) for a in group["apps"]]
+                st.session_state._last_group = selected_group
+                st.rerun()
+
+            col_upd, col_del = st.sidebar.columns(2)
+            with col_upd:
+                if st.button("Update", key="group_update", use_container_width=True):
+                    if st.session_state.selected_apps:
+                        group["apps"] = [dict(a) for a in st.session_state.selected_apps]
+                        save_groups(groups)
+                        st.sidebar.success("Updated!")
+                        st.rerun()
+            with col_del:
+                if st.button("Delete", key="group_delete", use_container_width=True):
+                    groups = [g for g in groups if g["name"] != selected_group]
+                    save_groups(groups)
+                    st.session_state._last_group = None
+                    st.sidebar.success("Deleted!")
+                    st.rerun()
+    else:
+        st.session_state._last_group = None
+
+# グループ保存
+if st.session_state.selected_apps:
+    show_save = st.sidebar.checkbox("Save current as group", value=False, key="show_save_group")
+    if show_save:
+        new_group_name = st.sidebar.text_input("Group name", key="new_group_name")
+        if st.sidebar.button("Save Group", key="save_group"):
+            if new_group_name:
+                existing_names = {g["name"] for g in groups}
+                if new_group_name in existing_names:
+                    st.sidebar.error("This group name already exists.")
+                else:
+                    new_group = {
+                        "id": str(uuid.uuid4()),
+                        "name": new_group_name,
+                        "apps": [dict(a) for a in st.session_state.selected_apps],
+                    }
+                    groups.append(new_group)
+                    save_groups(groups)
+                    st.sidebar.success(f"Saved: {new_group_name}")
+                    st.rerun()
+            else:
+                st.sidebar.warning("Enter a group name.")
+
+if groups or st.session_state.selected_apps:
+    st.sidebar.markdown("---")
 
 # --- 選択済みアプリ ---
 if st.session_state.selected_apps:
     st.sidebar.caption("SELECTED APPS")
     for i, app in enumerate(st.session_state.selected_apps):
         color = COLORS[i % len(COLORS)]
-        st.sidebar.markdown(
-            f'<div class="selected-app">'
-            f'<span class="selected-app-dot" style="background:{color}"></span>'
-            f'<span class="selected-app-name">{app["label"]}</span>'
-            f'<span class="selected-app-market">{app["market"]}</span>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
+        col_app, col_rm = st.sidebar.columns([5, 1])
+        with col_app:
+            st.markdown(
+                f'<div class="selected-app">'
+                f'<span class="selected-app-dot" style="background:{color}"></span>'
+                f'<span class="selected-app-name">{app["label"]}</span>'
+                f'<span class="selected-app-market">{app["market"]}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        with col_rm:
+            if st.button("✕", key=f"rm_{i}", help="Remove this app"):
+                st.session_state.selected_apps.pop(i)
+                st.rerun()
     # 一括クリアボタン
     if st.sidebar.button("Clear all", key="clear_all"):
         st.session_state.selected_apps = []
