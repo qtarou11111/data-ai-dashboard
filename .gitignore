@@ -4,3 +4,5 @@ __pycache__/
 .streamlit/secrets.toml
 sync_apps.log
 .claude/
+node_modules/
+dist/
