@@ -519,9 +519,11 @@ st.sidebar.caption("SEARCH & ADD APPS")
 if apps_db:
     search_market = st.sidebar.radio(
         "Market", ["All", "iOS", "Android"], horizontal=True, label_visibility="collapsed",
+        key="_search_market",
     )
     search_query = st.sidebar.text_input(
-        "検索", placeholder="App name, ID, or publisher...", label_visibility="collapsed"
+        "検索", placeholder="App name, ID, or publisher...", label_visibility="collapsed",
+        key="_search_query",
     )
 
     if search_query and len(search_query) >= 2:
