@@ -372,10 +372,12 @@ def on_app_select_change():
     for lbl in labels:
         if lbl in app_options_by_label:
             a = app_options_by_label[lbl]
+            name = a.get("name") or a["app_id"]
+            market_short = "iOS" if a.get("market") == "ios" else "Android"
             new_apps.append({
                 "app_id": a["app_id"],
                 "market": a["market"],
-                "label": a.get("name") or a["app_id"],
+                "label": f"{name} ({market_short})",
             })
     st.session_state.selected_apps = new_apps
 
@@ -572,7 +574,8 @@ if apps_db:
                 market_icon = "🍎" if a.get("market") == "ios" else "🤖"
                 btn_key = f"add_{a['app_id']}_{a['market']}"
                 if st.sidebar.button(f"＋  {market_icon} {name}", key=btn_key, use_container_width=True):
-                    entry = {"app_id": a["app_id"], "market": a["market"], "label": name}
+                    m_short = "iOS" if a.get("market") == "ios" else "Android"
+                    entry = {"app_id": a["app_id"], "market": a["market"], "label": f"{name} ({m_short})"}
                     if entry not in st.session_state.selected_apps:
                         st.session_state.selected_apps.append(entry)
                         # multiselect も同期
@@ -627,7 +630,8 @@ if st.session_state.selected_apps and apps_db:
                 name = a.get("name") or a["app_id"]
                 btn_key = f"rec_{a['app_id']}_{a['market']}"
                 if st.sidebar.button(f"＋  {name}", key=btn_key, use_container_width=True):
-                    entry = {"app_id": a["app_id"], "market": a["market"], "label": name}
+                    m_short = "iOS" if a.get("market") == "ios" else "Android"
+                    entry = {"app_id": a["app_id"], "market": a["market"], "label": f"{name} ({m_short})"}
                     if entry not in st.session_state.selected_apps:
                         st.session_state.selected_apps.append(entry)
                         st.session_state._ms_apps_pending = apps_to_labels(
