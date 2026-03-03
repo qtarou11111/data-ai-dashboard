@@ -23,8 +23,8 @@ BASE_URL = "https://api.appannie.com/v1.3"
 APPS_DB_PATH = Path(__file__).parent / "apps_db.json"
 
 # ─── カラーパレット ───
-COLORS = ["#4F8CF7", "#34D399", "#F59E42", "#EF4444", "#A78BFA", "#F472B6"]
-COLORS_LIGHT = ["#EBF1FE", "#ECFDF5", "#FFF7ED", "#FEF2F2", "#F5F3FF", "#FDF2F8"]
+COLORS = ["#00d4ff", "#00e676", "#7c3aed", "#f59e42", "#ef4444", "#f472b6"]
+COLORS_LIGHT = ["#0a1a2e", "#0a1e14", "#1a0e2e", "#1e1408", "#1e0a0a", "#1e0a14"]
 
 
 # ─── アプリDB ───
@@ -156,18 +156,18 @@ def resample_df(df, value_col, freq, agg="sum"):
 # ─── グラフ共通スタイル ───
 def apply_chart_style(fig):
     fig.update_layout(
-        plot_bgcolor="#FAFBFC",
-        paper_bgcolor="white",
-        font=dict(family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", size=12, color="#374151"),
+        plot_bgcolor="#111827",
+        paper_bgcolor="#111827",
+        font=dict(family="'DM Mono', 'Inter', sans-serif", size=12, color="#94a3b8"),
         legend=dict(
             orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0,
-            font=dict(size=11), bgcolor="rgba(0,0,0,0)",
+            font=dict(size=11, color="#94a3b8"), bgcolor="rgba(0,0,0,0)",
         ),
         margin=dict(l=16, r=16, t=32, b=16),
-        xaxis=dict(showgrid=False, linecolor="#E5E7EB", tickfont=dict(size=10, color="#9CA3AF")),
-        yaxis=dict(gridcolor="#F3F4F6", linecolor="#E5E7EB", tickfont=dict(size=10, color="#9CA3AF"), separatethousands=True),
+        xaxis=dict(showgrid=False, linecolor="#1e293b", tickfont=dict(size=10, color="#64748b")),
+        yaxis=dict(gridcolor="#1e293b", linecolor="#1e293b", tickfont=dict(size=10, color="#64748b"), separatethousands=True),
         hovermode="x unified",
-        hoverlabel=dict(bgcolor="white", bordercolor="#E5E7EB", font_size=12),
+        hoverlabel=dict(bgcolor="#111827", bordercolor="#1e293b", font_size=12, font_color="#f1f5f9"),
     )
     return fig
 
@@ -177,15 +177,32 @@ st.set_page_config(page_title="data.ai Dashboard", page_icon="📊", layout="wid
 
 st.markdown("""
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap');
 
-  /* ── Global ── */
+  /* ── Global Dark Theme ── */
   .block-container { padding-top: 2.5rem; max-width: 1280px; }
   html, body, [class*="st-"] { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-  [data-testid="stSidebar"] { background: #F8FAFC; border-right: 1px solid #E2E8F0; }
+  .stApp, [data-testid="stAppViewContainer"] { background: #0a0e1a !important; color: #f1f5f9; }
+  header[data-testid="stHeader"] { background: #0a0e1a !important; }
+
+  /* Sidebar dark */
+  [data-testid="stSidebar"] { background: #111827 !important; border-right: 1px solid #1e293b; }
   [data-testid="stSidebar"] > div:first-child { padding-top: 1rem; }
-  [data-testid="stAppViewContainer"] { background: #FFFFFF; }
-  header[data-testid="stHeader"] { background: transparent; }
+  [data-testid="stSidebar"] label, [data-testid="stSidebar"] .stMarkdown p,
+  [data-testid="stSidebar"] span, [data-testid="stSidebar"] .stCaption p { color: #94a3b8 !important; }
+  [data-testid="stSidebar"] input, [data-testid="stSidebar"] select,
+  [data-testid="stSidebar"] [data-baseweb="select"] { background: #0a0e1a !important; color: #f1f5f9 !important; border-color: #1e293b !important; }
+  [data-testid="stSidebar"] button[kind="primary"] { background: #00d4ff !important; color: #0a0e1a !important; border: none !important; }
+  [data-testid="stSidebar"] button:not([kind="primary"]) { background: #1e293b !important; color: #f1f5f9 !important; border: 1px solid #2d3a4d !important; }
+
+  /* Streamlit widget overrides */
+  .stTextInput > div > div { background: #111827 !important; border-color: #1e293b !important; color: #f1f5f9 !important; }
+  .stDateInput > div > div { background: #111827 !important; border-color: #1e293b !important; color: #f1f5f9 !important; }
+  .stSelectbox > div > div { background: #111827 !important; border-color: #1e293b !important; }
+  .stRadio label span { color: #94a3b8 !important; }
+  .stCheckbox label span { color: #94a3b8 !important; }
+  .stTabs [data-baseweb="tab-panel"] { background: transparent !important; }
+  div[data-testid="stDataFrame"] { border: 1px solid #1e293b; border-radius: 8px; }
 
   /* ── Header ── */
   .dash-header {
@@ -193,11 +210,13 @@ st.markdown("""
     margin: 0 0 0.5rem 0; flex-wrap: wrap; gap: 0.5rem;
   }
   .dash-title {
-    font-size: 1.5rem; font-weight: 700; color: #0F172A;
+    font-family: 'Syne', sans-serif;
+    font-size: 1.6rem; font-weight: 800; color: #f1f5f9;
     letter-spacing: -0.02em; margin: 0; line-height: 1.3;
   }
+  .dash-title span { color: #00d4ff; }
   .dash-subtitle {
-    font-size: 0.8rem; color: #94A3B8; font-weight: 400; margin: 0.15rem 0 0 0;
+    font-size: 0.8rem; color: #94a3b8; font-weight: 400; margin: 0.15rem 0 0 0;
   }
 
   /* ── Status Badges ── */
@@ -207,13 +226,13 @@ st.markdown("""
     padding: 0.2rem 0.65rem; border-radius: 9999px;
     font-size: 0.72rem; font-weight: 500; line-height: 1.4;
   }
-  .badge-outline { border: 1px solid #E2E8F0; color: #64748B; background: white; }
-  .badge-green  { background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; }
-  .badge-blue   { background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE; }
-  .badge-amber  { background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; }
+  .badge-outline { border: 1px solid #1e293b; color: #94a3b8; background: #111827; }
+  .badge-green  { background: #042f1e; color: #00e676; border: 1px solid #065f3a; }
+  .badge-blue   { background: #041e30; color: #00d4ff; border: 1px solid #0a3d5c; }
+  .badge-amber  { background: #2e1e04; color: #f59e42; border: 1px solid #5c3d0a; }
   .badge-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-  .badge-dot-green { background: #10B981; }
-  .badge-dot-amber { background: #F59E0B; }
+  .badge-dot-green { background: #00e676; }
+  .badge-dot-amber { background: #f59e42; }
 
   /* ── App Tags ── */
   .app-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1.25rem; }
@@ -227,62 +246,64 @@ st.markdown("""
 
   /* ── KPI Cards ── */
   .kpi-card {
-    background: white; border: 1px solid #E2E8F0; border-radius: 12px;
+    background: #111827; border: 1px solid #1e293b; border-radius: 12px;
     padding: 1.25rem 1.5rem; position: relative; overflow: hidden;
   }
   .kpi-card::before {
     content: ''; position: absolute; top: 0; left: 0; right: 0;
     height: 3px; border-radius: 12px 12px 0 0;
   }
-  .kpi-accent-blue::before   { background: #4F8CF7; }
-  .kpi-accent-green::before  { background: #34D399; }
-  .kpi-accent-purple::before { background: #A78BFA; }
-  .kpi-accent-orange::before { background: #F59E42; }
-  .kpi-label { font-size: 0.78rem; color: #64748B; font-weight: 500; margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.04em; }
-  .kpi-value { font-size: 1.75rem; font-weight: 700; color: #0F172A; margin: 0; letter-spacing: -0.02em; }
-  .kpi-sub   { font-size: 0.75rem; color: #94A3B8; margin: 0.25rem 0 0 0; }
+  .kpi-accent-cyan::before   { background: #00d4ff; }
+  .kpi-accent-green::before  { background: #00e676; }
+  .kpi-accent-purple::before { background: #7c3aed; }
+  .kpi-accent-orange::before { background: #f59e42; }
+  .kpi-label { font-size: 0.78rem; color: #94a3b8; font-weight: 500; margin: 0 0 0.35rem 0; text-transform: uppercase; letter-spacing: 0.04em; }
+  .kpi-value { font-family: 'DM Mono', monospace; font-size: 1.75rem; font-weight: 500; color: #f1f5f9; margin: 0; letter-spacing: -0.02em; }
+  .kpi-sub   { font-size: 0.75rem; color: #64748b; margin: 0.25rem 0 0 0; }
 
   /* ── Section headers ── */
   .section-header {
-    font-size: 0.95rem; font-weight: 600; color: #1E293B;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem; font-weight: 600; color: #f1f5f9;
     margin: 0.5rem 0 0.5rem 0; padding: 0;
   }
 
   /* ── Divider ── */
-  .section-divider { border: none; border-top: 1px solid #F1F5F9; margin: 1.5rem 0 1rem 0; }
+  .section-divider { border: none; border-top: 1px solid #1e293b; margin: 1.5rem 0 1rem 0; }
 
   /* ── Sidebar ── */
   [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { margin-bottom: 0; }
   [data-testid="stSidebar"] .sidebar-logo {
-    font-size: 1.1rem; font-weight: 700; color: #0F172A;
-    padding: 0.5rem 0 0.75rem; border-bottom: 1px solid #E2E8F0; margin-bottom: 0.75rem;
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem; font-weight: 700; color: #00d4ff;
+    padding: 0.5rem 0 0.75rem; border-bottom: 1px solid #1e293b; margin-bottom: 0.75rem;
   }
   .search-result {
     display: flex; align-items: center; justify-content: space-between;
     padding: 0.45rem 0.6rem; margin: 0.2rem 0; border-radius: 8px;
-    border: 1px solid #E2E8F0; background: white; transition: background 0.1s;
+    border: 1px solid #1e293b; background: #111827; transition: background 0.1s;
   }
-  .search-result:hover { background: #F8FAFC; }
+  .search-result:hover { background: #1e293b; }
   .search-result-info { flex: 1; min-width: 0; }
-  .search-result-name { font-size: 0.8rem; font-weight: 600; color: #1E293B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
-  .search-result-meta { font-size: 0.65rem; color: #94A3B8; margin: 0; }
+  .search-result-name { font-size: 0.8rem; font-weight: 600; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
+  .search-result-meta { font-size: 0.65rem; color: #64748b; margin: 0; }
   .selected-app {
     display: flex; align-items: center; gap: 0.5rem;
     padding: 0.4rem 0.6rem; margin: 0.2rem 0; border-radius: 8px;
-    border: 1px solid #E2E8F0; background: white;
+    border: 1px solid #1e293b; background: #0a0e1a;
   }
   .selected-app-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .selected-app-name { font-size: 0.8rem; font-weight: 500; color: #1E293B; flex: 1; margin: 0; }
-  .selected-app-market { font-size: 0.65rem; color: #94A3B8; margin: 0; }
+  .selected-app-name { font-size: 0.8rem; font-weight: 500; color: #f1f5f9; flex: 1; margin: 0; }
+  .selected-app-market { font-size: 0.65rem; color: #64748b; margin: 0; }
 
   /* ── Misc ── */
-  [data-testid="stTabs"] [data-baseweb="tab-list"] { gap: 0; }
+  [data-testid="stTabs"] [data-baseweb="tab-list"] { gap: 0; border-bottom: 1px solid #1e293b; }
   [data-testid="stTabs"] [data-baseweb="tab"] {
     font-size: 0.8rem; font-weight: 500; padding: 0.5rem 1rem;
-    color: #64748B; border-bottom: 2px solid transparent;
+    color: #64748b; border-bottom: 2px solid transparent;
   }
   [data-testid="stTabs"] [aria-selected="true"] {
-    color: #4F8CF7; border-bottom-color: #4F8CF7; font-weight: 600;
+    color: #00d4ff; border-bottom-color: #00d4ff; font-weight: 600;
   }
 </style>
 """, unsafe_allow_html=True)
@@ -292,7 +313,7 @@ st.markdown("""
 st.markdown("""
 <div class="dash-header">
   <div>
-    <p class="dash-title">App Intelligence Dashboard</p>
+    <p class="dash-title">App <span>Intelligence</span> Dashboard</p>
     <p class="dash-subtitle">data.ai API によるアプリ統計分析</p>
   </div>
 </div>
@@ -636,7 +657,7 @@ if not dl_df.empty or not dau_df.empty:
     with kpi_cols[0]:
         total_dl = int(dl_df["downloads"].sum()) if not dl_df.empty else 0
         st.markdown(
-            f'<div class="kpi-card kpi-accent-blue">'
+            f'<div class="kpi-card kpi-accent-cyan">'
             f'<p class="kpi-label">Total Downloads</p>'
             f'<p class="kpi-value">{format_number(total_dl)}</p>'
             f'<p class="kpi-sub">Period total</p></div>',
@@ -695,7 +716,7 @@ with chart_col1:
                         name=app_name, mode="lines",
                         line=dict(color=COLORS[i % len(COLORS)], width=2.5),
                         fill="tozeroy",
-                        fillcolor=f"rgba({int(COLORS[i % len(COLORS)][1:3],16)},{int(COLORS[i % len(COLORS)][3:5],16)},{int(COLORS[i % len(COLORS)][5:7],16)},0.05)",
+                        fillcolor=f"rgba({int(COLORS[i % len(COLORS)][1:3],16)},{int(COLORS[i % len(COLORS)][3:5],16)},{int(COLORS[i % len(COLORS)][5:7],16)},0.15)",
                     ))
                 apply_chart_style(fig)
                 st.plotly_chart(fig, use_container_width=True)
@@ -718,7 +739,7 @@ with chart_col2:
                         name=app_name, mode="lines",
                         line=dict(color=COLORS[i % len(COLORS)], width=2.5),
                         fill="tozeroy",
-                        fillcolor=f"rgba({int(COLORS[i % len(COLORS)][1:3],16)},{int(COLORS[i % len(COLORS)][3:5],16)},{int(COLORS[i % len(COLORS)][5:7],16)},0.05)",
+                        fillcolor=f"rgba({int(COLORS[i % len(COLORS)][1:3],16)},{int(COLORS[i % len(COLORS)][3:5],16)},{int(COLORS[i % len(COLORS)][5:7],16)},0.15)",
                     ))
                 apply_chart_style(fig)
                 st.plotly_chart(fig, use_container_width=True)
