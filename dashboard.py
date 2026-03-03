@@ -381,6 +381,11 @@ def on_app_select_change():
 if "_ms_apps" not in st.session_state:
     st.session_state._ms_apps = initial_labels
 
+# rerun 前に予約された値があれば反映（ウィジェット生成前なので安全）
+if "_ms_apps_pending" in st.session_state:
+    st.session_state._ms_apps = st.session_state._ms_apps_pending
+    del st.session_state._ms_apps_pending
+
 # Row 1: アプリ選択 (2/3) + グループ選択+削除 (1/3)
 row1_left, row1_right = st.columns([2, 1])
 
@@ -441,8 +446,8 @@ if sel_group != "--":
     if group and st.session_state.get("_last_group") != sel_group:
         st.session_state.selected_apps = [dict(a) for a in group["apps"]]
         st.session_state._last_group = sel_group
-        # multiselect の値も更新
-        st.session_state._ms_apps = apps_to_labels(st.session_state.selected_apps, app_options_by_key)
+        # multiselect の値も更新（ウィジェット生成後なので pending に予約）
+        st.session_state._ms_apps_pending = apps_to_labels(st.session_state.selected_apps, app_options_by_key)
         st.rerun()
 else:
     st.session_state._last_group = None
@@ -499,13 +504,13 @@ if st.session_state.selected_apps:
         with col_rm:
             if st.button("✕", key=f"rm_{i}", help="Remove"):
                 st.session_state.selected_apps.pop(i)
-                st.session_state._ms_apps = apps_to_labels(
+                st.session_state._ms_apps_pending = apps_to_labels(
                     st.session_state.selected_apps, app_options_by_key
                 )
                 st.rerun()
     if st.sidebar.button("Clear all", key="clear_all"):
         st.session_state.selected_apps = []
-        st.session_state._ms_apps = []
+        st.session_state._ms_apps_pending = []
         st.rerun()
     st.sidebar.markdown("---")
 
@@ -567,7 +572,7 @@ if apps_db:
                     if entry not in st.session_state.selected_apps:
                         st.session_state.selected_apps.append(entry)
                         # multiselect も同期
-                        st.session_state._ms_apps = apps_to_labels(
+                        st.session_state._ms_apps_pending = apps_to_labels(
                             st.session_state.selected_apps, app_options_by_key
                         )
                     st.rerun()
@@ -590,7 +595,7 @@ if show_manual:
             entry = {"app_id": manual_id, "market": manual_market, "label": label}
             if entry not in st.session_state.selected_apps:
                 st.session_state.selected_apps.append(entry)
-                st.session_state._ms_apps = apps_to_labels(
+                st.session_state._ms_apps_pending = apps_to_labels(
                     st.session_state.selected_apps, app_options_by_key
                 )
             st.rerun()
@@ -621,7 +626,7 @@ if st.session_state.selected_apps and apps_db:
                     entry = {"app_id": a["app_id"], "market": a["market"], "label": name}
                     if entry not in st.session_state.selected_apps:
                         st.session_state.selected_apps.append(entry)
-                        st.session_state._ms_apps = apps_to_labels(
+                        st.session_state._ms_apps_pending = apps_to_labels(
                             st.session_state.selected_apps, app_options_by_key
                         )
                     st.rerun()
