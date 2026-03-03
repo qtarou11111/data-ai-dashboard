@@ -391,64 +391,7 @@ groups = db_data.get("groups", [])
 if "selected_apps" not in st.session_state:
     st.session_state.selected_apps = []
 
-# --- グループ ---
-if groups:
-    st.sidebar.caption("GROUPS")
-    group_names = ["-- Select Group --"] + [g["name"] for g in groups]
-    selected_group = st.sidebar.selectbox(
-        "Group", group_names, label_visibility="collapsed", key="group_select",
-    )
-    if selected_group != "-- Select Group --":
-        group = next((g for g in groups if g["name"] == selected_group), None)
-        if group:
-            if st.session_state.get("_last_group") != selected_group:
-                st.session_state.selected_apps = [dict(a) for a in group["apps"]]
-                st.session_state._last_group = selected_group
-                st.rerun()
-
-            col_upd, col_del = st.sidebar.columns(2)
-            with col_upd:
-                if st.button("Update", key="group_update", use_container_width=True):
-                    if st.session_state.selected_apps:
-                        group["apps"] = [dict(a) for a in st.session_state.selected_apps]
-                        save_groups(groups)
-                        st.sidebar.success("Updated!")
-                        st.rerun()
-            with col_del:
-                if st.button("Delete", key="group_delete", use_container_width=True):
-                    groups = [g for g in groups if g["name"] != selected_group]
-                    save_groups(groups)
-                    st.session_state._last_group = None
-                    st.sidebar.success("Deleted!")
-                    st.rerun()
-    else:
-        st.session_state._last_group = None
-
-# グループ保存
-if st.session_state.selected_apps:
-    show_save = st.sidebar.checkbox("Save current as group", value=False, key="show_save_group")
-    if show_save:
-        new_group_name = st.sidebar.text_input("Group name", key="new_group_name")
-        if st.sidebar.button("Save Group", key="save_group"):
-            if new_group_name:
-                existing_names = {g["name"] for g in groups}
-                if new_group_name in existing_names:
-                    st.sidebar.error("This group name already exists.")
-                else:
-                    new_group = {
-                        "id": str(uuid.uuid4()),
-                        "name": new_group_name,
-                        "apps": [dict(a) for a in st.session_state.selected_apps],
-                    }
-                    groups.append(new_group)
-                    save_groups(groups)
-                    st.sidebar.success(f"Saved: {new_group_name}")
-                    st.rerun()
-            else:
-                st.sidebar.warning("Enter a group name.")
-
-if groups or st.session_state.selected_apps:
-    st.sidebar.markdown("---")
+# (グループ管理はメインエリアのコントロールバーに移動)
 
 # --- 選択済みアプリ ---
 if st.session_state.selected_apps:
@@ -586,9 +529,71 @@ if st.session_state.selected_apps and apps_db:
 
 
 # ═══════════════════════════════════════════════════════════════
-# メインエリア — コントロールバー（アプリ選択 + 日付 + フェッチ）
+# メインエリア — コントロールバー
 # ═══════════════════════════════════════════════════════════════
 
+# --- Row 1: グループ読み込み + 保存 ---
+st.markdown('<div class="control-bar">', unsafe_allow_html=True)
+
+grp_c1, grp_c2, grp_c3, grp_c4 = st.columns([2, 2, 1.5, 1])
+
+with grp_c1:
+    st.markdown('<p class="control-label">Group</p>', unsafe_allow_html=True)
+    group_names = ["--"] + [g["name"] for g in groups]
+    selected_group = st.selectbox(
+        "Group", group_names, label_visibility="collapsed", key="main_group_select",
+    )
+    if selected_group != "--":
+        group = next((g for g in groups if g["name"] == selected_group), None)
+        if group and st.session_state.get("_last_group") != selected_group:
+            st.session_state.selected_apps = [dict(a) for a in group["apps"]]
+            st.session_state._last_group = selected_group
+            st.rerun()
+    else:
+        st.session_state._last_group = None
+
+with grp_c2:
+    st.markdown('<p class="control-label">Save New Group</p>', unsafe_allow_html=True)
+    new_group_name = st.text_input(
+        "Group name", placeholder="Enter group name...",
+        label_visibility="collapsed", key="new_group_name",
+    )
+
+with grp_c3:
+    st.markdown('<p class="control-label">&nbsp;</p>', unsafe_allow_html=True)
+    if st.button("Save Group", use_container_width=True, key="save_group"):
+        if not st.session_state.selected_apps:
+            st.toast("アプリを選択してからグループを保存してください。", icon="⚠️")
+        elif not new_group_name:
+            st.toast("グループ名を入力してください。", icon="⚠️")
+        elif new_group_name in {g["name"] for g in groups}:
+            st.toast("同じ名前のグループが既に存在します。", icon="⚠️")
+        else:
+            new_group = {
+                "id": str(uuid.uuid4()),
+                "name": new_group_name,
+                "apps": [dict(a) for a in st.session_state.selected_apps],
+            }
+            groups.append(new_group)
+            save_groups(groups)
+            st.toast(f"グループ「{new_group_name}」を保存しました。", icon="✅")
+            st.rerun()
+
+with grp_c4:
+    st.markdown('<p class="control-label">&nbsp;</p>', unsafe_allow_html=True)
+    if selected_group != "--":
+        if st.button("Delete Group", use_container_width=True, key="delete_group"):
+            groups = [g for g in groups if g["name"] != selected_group]
+            save_groups(groups)
+            st.session_state._last_group = None
+            st.toast(f"グループ「{selected_group}」を削除しました。", icon="🗑️")
+            st.rerun()
+    else:
+        st.button("Delete Group", use_container_width=True, key="delete_group_disabled", disabled=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# --- Row 2: アプリ選択 + 日付 + フェッチ ---
 st.markdown('<div class="control-bar">', unsafe_allow_html=True)
 
 ctrl_c1, ctrl_c2, ctrl_c3, ctrl_c4, ctrl_c5 = st.columns([3, 1.5, 1.5, 1, 1])
@@ -605,7 +610,6 @@ with ctrl_c1:
             default=[l for l in current_labels if l in app_options],
             label_visibility="collapsed", key="main_app_select",
         )
-        # multiselect の変更を selected_apps に反映
         new_apps = []
         for label in selected_labels:
             a = app_options[label]
